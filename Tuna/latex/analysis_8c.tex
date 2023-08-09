@@ -1,0 +1,75 @@
+\hypertarget{analysis_8c}{}\doxysection{analysis.\+c File Reference}
+\label{analysis_8c}\index{analysis.c@{analysis.c}}
+
+
+This module contains the code to analyze the audio spectrum and determine the main frequency or note of the signal.  
+
+
+{\ttfamily \#include $<$stdint.\+h$>$}\newline
+{\ttfamily \#include \char`\"{}config.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}pitch.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}bargraph.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}analysis.\+h\char`\"{}}\newline
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+uint32\+\_\+t \mbox{\hyperlink{analysis_8c_ab25f9672ea8689ee1fa5368d26a14720}{isqrt\+\_\+rounded}} (uint32\+\_\+t a\+\_\+n\+Input)
+\begin{DoxyCompactList}\small\item\em Fast Square root algorithm, with rounding. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{analysis_8c_a8321f28f8f6ec3246e38c4dcad287b6a}\label{analysis_8c_a8321f28f8f6ec3246e38c4dcad287b6a}} 
+void {\bfseries calculate\+\_\+parabola\+\_\+coefficients} (\mbox{\hyperlink{structpoint}{point}} p1, \mbox{\hyperlink{structpoint}{point}} p2, \mbox{\hyperlink{structpoint}{point}} p3, double $\ast$a, double $\ast$b, double $\ast$c)
+\item 
+\mbox{\Hypertarget{analysis_8c_acdad428f5c6740a7626d99d8fb2ea772}\label{analysis_8c_acdad428f5c6740a7626d99d8fb2ea772}} 
+double {\bfseries calculate\+\_\+parabola\+\_\+maximum} (double a, double b)
+\item 
+\mbox{\Hypertarget{analysis_8c_a1d06a56eb6f5687173a49e1cee97832e}\label{analysis_8c_a1d06a56eb6f5687173a49e1cee97832e}} 
+void {\bfseries analysis\+\_\+absolute} (int16\+\_\+t spectrum\mbox{[}$\,$\mbox{]}, uint16\+\_\+t size)
+\item 
+\mbox{\Hypertarget{analysis_8c_a402b1472b72d881265445b264413a278}\label{analysis_8c_a402b1472b72d881265445b264413a278}} 
+uint16\+\_\+t {\bfseries analysis\+\_\+find\+\_\+peak\+\_\+frequency} (int16\+\_\+t spectrum\mbox{[}$\,$\mbox{]}, uint16\+\_\+t size, uint16\+\_\+t $\ast$index)
+\item 
+\mbox{\Hypertarget{analysis_8c_af5dfa98c982dfb773a97640a907b9616}\label{analysis_8c_af5dfa98c982dfb773a97640a907b9616}} 
+double {\bfseries analysis\+\_\+find\+\_\+interpolated\+\_\+peak\+\_\+frequency} (int16\+\_\+t spectrum\mbox{[}$\,$\mbox{]}, uint16\+\_\+t size)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This module contains the code to analyze the audio spectrum and determine the main frequency or note of the signal. 
+
+\begin{DoxyAuthor}{Author}
+Dennis Witzig 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+2022-\/10-\/21 
+\end{DoxyDate}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{analysis_8c_ab25f9672ea8689ee1fa5368d26a14720}\label{analysis_8c_ab25f9672ea8689ee1fa5368d26a14720}} 
+\index{analysis.c@{analysis.c}!isqrt\_rounded@{isqrt\_rounded}}
+\index{isqrt\_rounded@{isqrt\_rounded}!analysis.c@{analysis.c}}
+\doxysubsubsection{\texorpdfstring{isqrt\_rounded()}{isqrt\_rounded()}}
+{\footnotesize\ttfamily uint32\+\_\+t isqrt\+\_\+rounded (\begin{DoxyParamCaption}\item[{uint32\+\_\+t}]{a\+\_\+n\+Input }\end{DoxyParamCaption})}
+
+
+
+Fast Square root algorithm, with rounding. 
+
+This does arithmetic rounding of the result. That is, if the real answer would have a fractional part of 0.\+5 or greater, the result is rounded up to the next integer.
+\begin{DoxyItemize}
+\item Square\+Root\+Rounded(2) -\/-\/\texorpdfstring{$>$}{>} 1
+\item Square\+Root\+Rounded(3) -\/-\/\texorpdfstring{$>$}{>} 2
+\item Square\+Root\+Rounded(4) -\/-\/\texorpdfstring{$>$}{>} 2
+\item Square\+Root\+Rounded(6) -\/-\/\texorpdfstring{$>$}{>} 2
+\item Square\+Root\+Rounded(7) -\/-\/\texorpdfstring{$>$}{>} 3
+\item Square\+Root\+Rounded(8) -\/-\/\texorpdfstring{$>$}{>} 3
+\item Square\+Root\+Rounded(9) -\/-\/\texorpdfstring{$>$}{>} 3
+\end{DoxyItemize}
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em a\+\_\+n\+Input} & -\/ unsigned integer for which to find the square root \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Integer square root of the input value. 
+\end{DoxyReturn}

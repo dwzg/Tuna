@@ -1,0 +1,77 @@
+\hypertarget{fft8_8h}{}\doxysection{fft8.\+h File Reference}
+\label{fft8_8h}\index{fft8.h@{fft8.h}}
+
+
+This module contains the header for the FFT implementation.  
+
+
+{\ttfamily \#include $<$stdint.\+h$>$}\newline
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int16\+\_\+t \mbox{\hyperlink{fft8_8h_abb2412b82bf2ba4e981a41b8d06413ab}{fft8}} (int8\+\_\+t fr\mbox{[}$\,$\mbox{]}, int8\+\_\+t fi\mbox{[}$\,$\mbox{]}, int16\+\_\+t m, uint8\+\_\+t inverse)
+\begin{DoxyCompactList}\small\item\em Perform forward/inverse fast Fourier transform. \end{DoxyCompactList}\item 
+int16\+\_\+t \mbox{\hyperlink{fft8_8h_a073572621b0edc7ee7b2c1bebeb9cd22}{fft\+\_\+real8}} (int8\+\_\+t f\mbox{[}$\,$\mbox{]}, int16\+\_\+t m, uint8\+\_\+t inverse)
+\begin{DoxyCompactList}\small\item\em Perform forward/inverse FFT on array of real numbers. Real FFT/i\+FFT using half-\/size complex FFT by distributing even/odd samples into real/imaginary arrays respectively. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This module contains the header for the FFT implementation. 
+
+\begin{DoxyAuthor}{Author}
+Dennis Witzig 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+2022-\/10-\/22 
+\end{DoxyDate}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{fft8_8h_abb2412b82bf2ba4e981a41b8d06413ab}\label{fft8_8h_abb2412b82bf2ba4e981a41b8d06413ab}} 
+\index{fft8.h@{fft8.h}!fft8@{fft8}}
+\index{fft8@{fft8}!fft8.h@{fft8.h}}
+\doxysubsubsection{\texorpdfstring{fft8()}{fft8()}}
+{\footnotesize\ttfamily int16\+\_\+t fft8 (\begin{DoxyParamCaption}\item[{int8\+\_\+t}]{fr\mbox{[}$\,$\mbox{]},  }\item[{int8\+\_\+t}]{fi\mbox{[}$\,$\mbox{]},  }\item[{int16\+\_\+t}]{m,  }\item[{uint8\+\_\+t}]{inverse }\end{DoxyParamCaption})}
+
+
+
+Perform forward/inverse fast Fourier transform. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em fr} & Array of real values. \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em fi} & Array of imaginary values. \\
+\hline
+\mbox{\texttt{ in}}  & {\em m} & log2 of FFT size \\
+\hline
+\mbox{\texttt{ in}}  & {\em inverse} & Flag for forward (zero) or inverse (non-\/zero) FFT. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Scaling factor for inverse FFT. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{fft8_8h_a073572621b0edc7ee7b2c1bebeb9cd22}\label{fft8_8h_a073572621b0edc7ee7b2c1bebeb9cd22}} 
+\index{fft8.h@{fft8.h}!fft\_real8@{fft\_real8}}
+\index{fft\_real8@{fft\_real8}!fft8.h@{fft8.h}}
+\doxysubsubsection{\texorpdfstring{fft\_real8()}{fft\_real8()}}
+{\footnotesize\ttfamily int16\+\_\+t fft\+\_\+real8 (\begin{DoxyParamCaption}\item[{int8\+\_\+t}]{f\mbox{[}$\,$\mbox{]},  }\item[{int16\+\_\+t}]{m,  }\item[{uint8\+\_\+t}]{inverse }\end{DoxyParamCaption})}
+
+
+
+Perform forward/inverse FFT on array of real numbers. Real FFT/i\+FFT using half-\/size complex FFT by distributing even/odd samples into real/imaginary arrays respectively. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em fr} & Array of real values. \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em fi} & Array of imaginary values. \\
+\hline
+\mbox{\texttt{ in}}  & {\em m} & log2 of FFT size \\
+\hline
+\mbox{\texttt{ in}}  & {\em inverse} & Flag for forward (zero) or inverse (non-\/zero) FFT. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Scaling factor for inverse FFT. 
+\end{DoxyReturn}

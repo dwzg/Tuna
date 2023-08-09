@@ -1,0 +1,95 @@
+\hypertarget{max7219_8h}{}\doxysection{max7219.\+h File Reference}
+\label{max7219_8h}\index{max7219.h@{max7219.h}}
+
+
+This module contains the header to interact with the MAX7219 display driver.  
+
+
+{\ttfamily \#include $<$stdint.\+h$>$}\newline
+\doxysubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{max7219_8h_ab6b9b5af0faf307d8a53830bee7bc7b0}\label{max7219_8h_ab6b9b5af0faf307d8a53830bee7bc7b0}} 
+\#define {\bfseries MAX7219\+\_\+\+NO\+\_\+\+OP\+\_\+\+REGISTER}~0x00
+\item 
+\mbox{\Hypertarget{max7219_8h_ad72b7fe5cc44df16f1a27601d743c25b}\label{max7219_8h_ad72b7fe5cc44df16f1a27601d743c25b}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+0\+\_\+\+REGISTER}~0x01
+\item 
+\mbox{\Hypertarget{max7219_8h_a8a493aa7425efacd8635a970397e15a3}\label{max7219_8h_a8a493aa7425efacd8635a970397e15a3}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+1\+\_\+\+REGISTER}~0x02
+\item 
+\mbox{\Hypertarget{max7219_8h_aabebe8b65910e31f7fc976538d762027}\label{max7219_8h_aabebe8b65910e31f7fc976538d762027}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+2\+\_\+\+REGISTER}~0x03
+\item 
+\mbox{\Hypertarget{max7219_8h_a0e20feba1021c8ec24207263b0d18895}\label{max7219_8h_a0e20feba1021c8ec24207263b0d18895}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+3\+\_\+\+REGISTER}~0x04
+\item 
+\mbox{\Hypertarget{max7219_8h_ac3fb7e6fc8cf541b6ab09ac680c72041}\label{max7219_8h_ac3fb7e6fc8cf541b6ab09ac680c72041}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+4\+\_\+\+REGISTER}~0x05
+\item 
+\mbox{\Hypertarget{max7219_8h_a671507ed04cf14fcffe1d6e04ab7b5d0}\label{max7219_8h_a671507ed04cf14fcffe1d6e04ab7b5d0}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+5\+\_\+\+REGISTER}~0x06
+\item 
+\mbox{\Hypertarget{max7219_8h_a6a1d6bb2e278a54466ffe41467f7c50e}\label{max7219_8h_a6a1d6bb2e278a54466ffe41467f7c50e}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+6\+\_\+\+REGISTER}~0x07
+\item 
+\mbox{\Hypertarget{max7219_8h_aad14bd94d25fa09b81070e397b4371bf}\label{max7219_8h_aad14bd94d25fa09b81070e397b4371bf}} 
+\#define {\bfseries MAX7219\+\_\+\+DIGIT\+\_\+7\+\_\+\+REGISTER}~0x08
+\item 
+\mbox{\Hypertarget{max7219_8h_a66fb929c5443400f00fbb769a8a9ae38}\label{max7219_8h_a66fb929c5443400f00fbb769a8a9ae38}} 
+\#define {\bfseries MAX7219\+\_\+\+DECODE\+\_\+\+MODE\+\_\+\+REGISTER}~0x09
+\item 
+\mbox{\Hypertarget{max7219_8h_aedca7deffd800234c03571671cbc4a14}\label{max7219_8h_aedca7deffd800234c03571671cbc4a14}} 
+\#define {\bfseries MAX7219\+\_\+\+INTENSITY\+\_\+\+REGISTER}~0x0A
+\item 
+\mbox{\Hypertarget{max7219_8h_a752ac166aa4b35ad6b68277c36861968}\label{max7219_8h_a752ac166aa4b35ad6b68277c36861968}} 
+\#define {\bfseries MAX7219\+\_\+\+SCAN\+\_\+\+LIMIT\+\_\+\+REGISTER}~0x0B
+\item 
+\mbox{\Hypertarget{max7219_8h_af61553a25f36670ee6a46af57c9004f3}\label{max7219_8h_af61553a25f36670ee6a46af57c9004f3}} 
+\#define {\bfseries MAX7219\+\_\+\+SHUTDOWN\+\_\+\+REGISTER}~0x0C
+\item 
+\mbox{\Hypertarget{max7219_8h_a8aa8faa6feb9a0ec94cb1f9dfb09450f}\label{max7219_8h_a8aa8faa6feb9a0ec94cb1f9dfb09450f}} 
+\#define {\bfseries MAX7219\+\_\+\+DISPLAY\+\_\+\+TEST\+\_\+\+REGISTER}~0x0F
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{max7219_8h_a11b2947a4ac85e7def9b38cc1cad79ab}\label{max7219_8h_a11b2947a4ac85e7def9b38cc1cad79ab}} 
+void {\bfseries max7219\+\_\+init} ()
+\begin{DoxyCompactList}\small\item\em Initialize MAX7219 for intended usage. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{max7219_8h_a931014f9b1678dd2cabf685d07f4a130}{max7219\+\_\+write}} (uint8\+\_\+t address, uint8\+\_\+t data)
+\begin{DoxyCompactList}\small\item\em Write data into a register of the MAX7219. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{max7219_8h_a509b75683578fda0f23c0f4aa02c4a5f}\label{max7219_8h_a509b75683578fda0f23c0f4aa02c4a5f}} 
+void {\bfseries max7219\+\_\+reset} ()
+\begin{DoxyCompactList}\small\item\em Reset all registers to zero. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This module contains the header to interact with the MAX7219 display driver. 
+
+\begin{DoxyAuthor}{Author}
+Dennis Witzig 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+2022-\/10-\/14 
+\end{DoxyDate}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{max7219_8h_a931014f9b1678dd2cabf685d07f4a130}\label{max7219_8h_a931014f9b1678dd2cabf685d07f4a130}} 
+\index{max7219.h@{max7219.h}!max7219\_write@{max7219\_write}}
+\index{max7219\_write@{max7219\_write}!max7219.h@{max7219.h}}
+\doxysubsubsection{\texorpdfstring{max7219\_write()}{max7219\_write()}}
+{\footnotesize\ttfamily void max7219\+\_\+write (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{address,  }\item[{uint8\+\_\+t}]{data }\end{DoxyParamCaption})}
+
+
+
+Write data into a register of the MAX7219. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em address} & Address of the register to write data to. \\
+\hline
+\mbox{\texttt{ in}}  & {\em data} & Data to be written. \\
+\hline
+\end{DoxyParams}

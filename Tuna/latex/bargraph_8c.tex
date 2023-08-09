@@ -1,0 +1,122 @@
+\hypertarget{bargraph_8c}{}\doxysection{bargraph.\+c File Reference}
+\label{bargraph_8c}\index{bargraph.c@{bargraph.c}}
+
+
+This module contains the code to interact with a bar graph display connected to a MAX7219 display driver.  
+
+
+{\ttfamily \#include $<$stdint.\+h$>$}\newline
+{\ttfamily \#include \char`\"{}max7219.\+h\char`\"{}}\newline
+{\ttfamily \#include \char`\"{}bargraph.\+h\char`\"{}}\newline
+\doxysubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{bargraph_8c_a1f4c3d35fbde3d7b108e6f0dc11079d7}\label{bargraph_8c_a1f4c3d35fbde3d7b108e6f0dc11079d7}} 
+\#define {\bfseries BARGRAPH\+\_\+\+SIZE}~20
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{bargraph_8c_af5b3d9d193e2450b727e55870bc757ea}\label{bargraph_8c_af5b3d9d193e2450b727e55870bc757ea}} 
+void {\bfseries bargraph\+\_\+send\+\_\+data} ()
+\begin{DoxyCompactList}\small\item\em Send current bar graph state to the display driver. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{bargraph_8c_a868ccf41ea3238e078e8078f725a2189}{bargraph\+\_\+set\+\_\+element}} (uint8\+\_\+t element, uint8\+\_\+t value)
+\begin{DoxyCompactList}\small\item\em Sets a given element of the bar graph to the given value. \end{DoxyCompactList}\item 
+uint8\+\_\+t \mbox{\hyperlink{bargraph_8c_ae3b66612fb792d2eac4bd7b28edff873}{bargraph\+\_\+get\+\_\+element}} (uint8\+\_\+t element)
+\begin{DoxyCompactList}\small\item\em Gets the current value of a given element of the bar graph. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{bargraph_8c_afbc7b89038980f995d456749ba0282c1}{bargraph\+\_\+set\+\_\+level}} (uint8\+\_\+t level, uint8\+\_\+t origin)
+\begin{DoxyCompactList}\small\item\em Sets the bar graph to a given level bar starting from origin. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{bargraph_8c_a6c31b7282b63f7ce4ddb0a3238a4c0c8}{bargraph\+\_\+set\+\_\+range}} (uint8\+\_\+t range, uint8\+\_\+t fill)
+\begin{DoxyCompactList}\small\item\em Sets the bar graph to a given centered range. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{bargraph_8c_aecdb81cef1ba4ba1176abbf2e68dba5f}\label{bargraph_8c_aecdb81cef1ba4ba1176abbf2e68dba5f}} 
+void {\bfseries bargraph\+\_\+set\+\_\+binary} (int16\+\_\+t value)
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{bargraph_8c_a1ebcfd56bd9afc07f64a0335ab6528b5}\label{bargraph_8c_a1ebcfd56bd9afc07f64a0335ab6528b5}} 
+uint32\+\_\+t {\bfseries bargraph\+\_\+state} = 0
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This module contains the code to interact with a bar graph display connected to a MAX7219 display driver. 
+
+\begin{DoxyAuthor}{Author}
+Dennis Witzig 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+2022-\/10-\/15 
+\end{DoxyDate}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{bargraph_8c_ae3b66612fb792d2eac4bd7b28edff873}\label{bargraph_8c_ae3b66612fb792d2eac4bd7b28edff873}} 
+\index{bargraph.c@{bargraph.c}!bargraph\_get\_element@{bargraph\_get\_element}}
+\index{bargraph\_get\_element@{bargraph\_get\_element}!bargraph.c@{bargraph.c}}
+\doxysubsubsection{\texorpdfstring{bargraph\_get\_element()}{bargraph\_get\_element()}}
+{\footnotesize\ttfamily uint8\+\_\+t bargraph\+\_\+get\+\_\+element (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{element }\end{DoxyParamCaption})}
+
+
+
+Gets the current value of a given element of the bar graph. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em element} & Bar graph element to set, going left to right. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Value of the element. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{bargraph_8c_a868ccf41ea3238e078e8078f725a2189}\label{bargraph_8c_a868ccf41ea3238e078e8078f725a2189}} 
+\index{bargraph.c@{bargraph.c}!bargraph\_set\_element@{bargraph\_set\_element}}
+\index{bargraph\_set\_element@{bargraph\_set\_element}!bargraph.c@{bargraph.c}}
+\doxysubsubsection{\texorpdfstring{bargraph\_set\_element()}{bargraph\_set\_element()}}
+{\footnotesize\ttfamily void bargraph\+\_\+set\+\_\+element (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{element,  }\item[{uint8\+\_\+t}]{value }\end{DoxyParamCaption})}
+
+
+
+Sets a given element of the bar graph to the given value. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em element} & Bar graph element to set, going left to right. \\
+\hline
+\mbox{\texttt{ in}}  & {\em value} & Value to set element to. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{bargraph_8c_afbc7b89038980f995d456749ba0282c1}\label{bargraph_8c_afbc7b89038980f995d456749ba0282c1}} 
+\index{bargraph.c@{bargraph.c}!bargraph\_set\_level@{bargraph\_set\_level}}
+\index{bargraph\_set\_level@{bargraph\_set\_level}!bargraph.c@{bargraph.c}}
+\doxysubsubsection{\texorpdfstring{bargraph\_set\_level()}{bargraph\_set\_level()}}
+{\footnotesize\ttfamily void bargraph\+\_\+set\+\_\+level (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{level,  }\item[{uint8\+\_\+t}]{origin }\end{DoxyParamCaption})}
+
+
+
+Sets the bar graph to a given level bar starting from origin. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em level} & Level bar to display. \\
+\hline
+\mbox{\texttt{ in}}  & {\em origin} & Origin of the level bar. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{bargraph_8c_a6c31b7282b63f7ce4ddb0a3238a4c0c8}\label{bargraph_8c_a6c31b7282b63f7ce4ddb0a3238a4c0c8}} 
+\index{bargraph.c@{bargraph.c}!bargraph\_set\_range@{bargraph\_set\_range}}
+\index{bargraph\_set\_range@{bargraph\_set\_range}!bargraph.c@{bargraph.c}}
+\doxysubsubsection{\texorpdfstring{bargraph\_set\_range()}{bargraph\_set\_range()}}
+{\footnotesize\ttfamily void bargraph\+\_\+set\+\_\+range (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{range,  }\item[{uint8\+\_\+t}]{fill }\end{DoxyParamCaption})}
+
+
+
+Sets the bar graph to a given centered range. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em range} & Half width of the range. \\
+\hline
+\mbox{\texttt{ in}}  & {\em fill} & Flag to fill the inside of the range. \\
+\hline
+\end{DoxyParams}
