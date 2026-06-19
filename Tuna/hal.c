@@ -35,14 +35,16 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                          INCLUDE DEFINITIONS                              */
 /*---------------------------------------------------------------------------*/
+#ifndef F_CPU
 #define F_CPU 24000000UL
+#endif
 #define __DELAY_BACKWARD_COMPATIBLE__
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
-#include <xc.h>
+#include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "config.h"
