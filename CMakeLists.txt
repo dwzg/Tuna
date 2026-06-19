@@ -40,11 +40,11 @@ set(MCU_FLAGS -mmcu=${MCU} -B "${AVR_DFP}/gcc/dev/${MCU}")
 # ---------------------------------------------------------------------------
 # Firmware
 # ---------------------------------------------------------------------------
-file(GLOB SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Tuna/*.c")
+file(GLOB SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.c")
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
 
-target_include_directories(${PROJECT_NAME}.elf PRIVATE "${CMAKE_SOURCE_DIR}/Tuna")
+target_include_directories(${PROJECT_NAME}.elf PRIVATE "${CMAKE_SOURCE_DIR}/src")
 target_compile_definitions(${PROJECT_NAME}.elf PRIVATE F_CPU=${F_CPU})
 target_include_directories(${PROJECT_NAME}.elf SYSTEM PRIVATE "${AVR_DFP}/include")
 

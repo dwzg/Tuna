@@ -43,6 +43,12 @@ Key points:
 Build artifacts (`*.elf`, `*.hex`, `*.map`, `build/`, `Debug/`, `Release/`) are
 gitignored.
 
+## Layout
+
+- `src/` — all firmware sources; each module is a `.c` with its `.h` alongside.
+- `cmake/avr-toolchain.cmake` — the AVR cross-compile toolchain file.
+- `CMakeLists.txt` — top-level build (file paths below are relative to `src/`).
+
 ## Architecture
 
 The program is a cooperative state machine, not an RTOS. `main()` calls `control()` in a
