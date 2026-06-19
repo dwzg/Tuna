@@ -26,60 +26,32 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   acquisition.c
+ * @file   yin.h
  * @author Dennis Witzig
- * @date   2022-10-22
- * @brief  This module contains the code for data acquisition.
+ * @date   2026-06-19
+ * @brief  Time-domain fundamental-frequency estimation using the YIN algorithm.
  */
+
+#ifndef YIN_H_
+#define YIN_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
-#include "hal.h"
-#include "acquisition.h"
+#include "config.h"
 
 /*---------------------------------------------------------------------------*/
-/*                         DEFINITIONS AND MACROS                            */
+/*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*                         TYPEDEFS AND STRUCTURES                           */
-/*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*                               PROTOTYPES                                  */
-/*---------------------------------------------------------------------------*/
-void acquisition_callback();
-
-/*---------------------------------------------------------------------------*/
-/*                            LOCAL VARIABLES                                */
-/*---------------------------------------------------------------------------*/
-int16_t acquisition_buffer[FFT_SIZE];
-volatile uint16_t acquisition_buffer_index = 0;
-
-/*---------------------------------------------------------------------------*/
-/*                        FUNCTION IMPLEMENTATION                            */
-/*---------------------------------------------------------------------------*/
-void acquisition_fill_buffer()
-{
-    hal_start_sample_counter(acquisition_callback);
-
-    while (acquisition_buffer_index < FFT_SIZE);
-
-    acquisition_buffer_index = 0;
-    hal_stop_sample_counter();
-}
-
-void acquisition_callback()
-{
-    if (acquisition_buffer_index < FFT_SIZE) {
-        acquisition_buffer[acquisition_buffer_index] = hal_get_adc_sample();
-    }
-
-    ++acquisition_buffer_index;
-}
+/**
+ * @brief  Estimate the fundamental frequency of a block of audio samples.
+ * @param[in] samples Buffer of FFT_SIZE time-domain samples (not modified).
+ * @return Estimated fundamental frequency in Hz, or 0.0 if none was found.
+ */
+double yin_frequency(int16_t samples[]);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
+#endif /* YIN_H_ */

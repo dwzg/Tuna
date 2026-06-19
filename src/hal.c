@@ -99,12 +99,27 @@ void hal_init()
     _PROTECTED_WRITE(CLKCTRL.OSCHFCTRLA, ((CLKCTRL_FRQSEL_24M_gc) | (CLKCTRL_AUTOTUNE_bm)));
 
     /**
-     * @brief Set internal voltage reference to VDD (5 V).
+     * @brief Set ADC reference to VDD (5 V).
      */
     VREF.ADC0REF = VREF_REFSEL_VDD_gc;
 
     /**
-     * @brief Set ADC to differential 12 bit mode.
+     * @brief Set ADC clock to CLK_PER / 16 = 1.5 MHz (at the device maximum).
+     *        Without this the ADC runs at the default prescaler, far above
+     *        the specified maximum ADC clock at 24 MHz CLK_PER, which yields
+     *        inaccurate conversions.
+     */
+    ADC0.CTRLC = ADC_PRESC_DIV16_gc;
+
+    /**
+     * @brief Extend the sample duration to settle higher source impedances.
+     */
+    ADC0.SAMPCTRL = 14;
+
+    /**
+     * @brief Enable the ADC in single-ended 12 bit mode (CONVMODE defaults to
+     *        single-ended). The AC-coupled, VDD/2-biased input is re-centred
+     *        to a signed value in hal_get_adc_sample().
      */
     ADC0.CTRLA = ADC_ENABLE_bm
                | ADC_RESSEL_12BIT_gc;
@@ -134,6 +149,7 @@ int16_t hal_get_adc_sample()
 
     while (!(ADC0.INTFLAGS & ADC_RESRDY_bm));
 
+    /* Single-ended 12 bit result is 0..4095; re-centre to -2048..2047. */
     sample = ((int16_t)ADC0.RES) - (1 << 11);
 
     return sample;

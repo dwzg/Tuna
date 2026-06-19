@@ -42,8 +42,8 @@ For more information, please refer to <http://unlicense.org/>
 #include "bargraph.h"
 #include "acquisition.h"
 #include "analysis.h"
-#include "window.h"
-#include "fft.h"
+#include "yin.h"
+#include "pitch.h"
 #include "config.h"
 #include "control.h"
 
@@ -59,6 +59,7 @@ typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
+static void display_note(double frequency);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
@@ -83,18 +84,19 @@ void control()
         current_state = ACQUISITION;
     	break;
     case ACQUISITION:
-        //acquisition_fill_buffer();
+        acquisition_fill_buffer();
         current_state = ANALYSIS;
         break;
     case ANALYSIS:
-        window_apply_window(acquisition_buffer);
-        fft_real(acquisition_buffer, LOG2_FFT_SIZE, 0);
-        analysis_absolute(acquisition_buffer, FFT_SIZE);
-        peak_freq = analysis_find_interpolated_peak_frequency(acquisition_buffer, FFT_SIZE / 2);
+#if defined(PITCH_METHOD_YIN)
+        peak_freq = yin_frequency(acquisition_buffer);
+#elif defined(PITCH_METHOD_FFT)
+        peak_freq = analysis_fft_frequency(acquisition_buffer);
+#endif
         current_state = DISPLAY;
         break;
     case DISPLAY:
-        segment_display_num(peak_freq);
+        display_note(peak_freq);
         current_state = ACQUISITION;
         break;
     case ERROR:
@@ -136,6 +138,46 @@ void greet_message()
     max7219_write(0x01, 0);
     max7219_write(0x02, 0);
     bargraph_set_level(0, BARGRAPH_LEFT);
+}
+
+/**
+ * @brief Render the detected note on the displays: note letter (with decimal
+ *        point for accidentals) on digit 0, octave on digit 1, and the cents
+ *        deviation as a centred needle on the bargraph (left = flat, right =
+ *        sharp). A non-positive/out-of-range frequency blanks the display.
+ */
+static void display_note(double frequency)
+{
+#ifdef SHARP
+    static const char NOTE_LETTER[12] = { 'C','C','D','D','E','F','F','G','G','A','A','H' };
+#else
+    static const char NOTE_LETTER[12] = { 'C','D','D','E','E','F','G','G','A','A','H','H' };
+#endif
+    static const uint8_t NOTE_ACCIDENTAL[12] = { 0,1,0,1,0,0,1,0,1,0,1,0 };
+
+    NOTE note = pitch_from_frequency(frequency);
+    double position;
+
+    if (!note.valid) {
+        max7219_write(MAX7219_DIGIT_0_REGISTER, 0);
+        max7219_write(MAX7219_DIGIT_1_REGISTER, 0);
+        bargraph_set_binary(0);
+        return;
+    }
+
+    segment_display_char(0, NOTE_LETTER[note.pitch_class], NOTE_ACCIDENTAL[note.pitch_class]);
+    segment_display_num_digit(1, (uint8_t)note.octave, 0);
+
+    /* Map -50..+50 cents onto bargraph elements 0..BARGRAPH_SIZE-1. */
+    position = (note.cents + 50.0) * (double)(BARGRAPH_SIZE - 1) / 100.0 + 0.5;
+    if (position < 0.0) {
+        position = 0.0;
+    } else if (position > (double)(BARGRAPH_SIZE - 1)) {
+        position = (double)(BARGRAPH_SIZE - 1);
+    }
+
+    bargraph_set_binary(0);
+    bargraph_set_element((uint8_t)position, BARGRAPH_ON);
 }
 
 /*---------------------------------------------------------------------------*/

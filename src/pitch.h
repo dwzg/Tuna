@@ -56,6 +56,16 @@ typedef enum {
 #endif
 } PITCH_CLASS;
 
+/**
+ * @brief Nearest note to a measured frequency, with the tuning deviation.
+ */
+typedef struct {
+    PITCH_CLASS pitch_class; /**< Nearest pitch class (C .. H).             */
+    int8_t octave;           /**< Octave index, matching pitch_get_frequency. */
+    double cents;            /**< Deviation from the note, -50 .. +50 cents. */
+    uint8_t valid;           /**< Non-zero if frequency mapped to a note.   */
+} NOTE;
+
 /*---------------------------------------------------------------------------*/
 /*                            GLOBAL VARIABLES                               */
 /*---------------------------------------------------------------------------*/
@@ -64,6 +74,14 @@ typedef enum {
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
 double pitch_get_frequency(PITCH_CLASS pitch_class, uint8_t octave);
+
+/**
+ * @brief  Map a measured frequency to the nearest equal-tempered note (A4=440).
+ * @param[in] frequency Measured frequency in Hz.
+ * @return Nearest note and the cents deviation; .valid is 0 for a non-positive
+ *         or out-of-range frequency.
+ */
+NOTE pitch_from_frequency(double frequency);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

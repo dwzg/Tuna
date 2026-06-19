@@ -53,6 +53,8 @@ For more information, please refer to <http://unlicense.org/>
 #define BARGRAPH_UNFILLED 0
 #define BARGRAPH_FILLED 1
 
+#define BARGRAPH_SIZE 20
+
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/

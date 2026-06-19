@@ -48,10 +48,6 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
-typedef struct point {
-    double x;
-    double y;
-} point;
 
 /*---------------------------------------------------------------------------*/
 /*                            GLOBAL VARIABLES                               */
@@ -60,9 +56,14 @@ typedef struct point {
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-void analysis_absolute(int16_t spectrum[], uint16_t size);
-uint16_t analysis_find_peak_frequency(int16_t spectrum[], uint16_t size, uint16_t *index);
-double analysis_find_interpolated_peak_frequency(int16_t spectrum[], uint16_t size);
+/**
+ * @brief  Estimate the fundamental frequency of a block of audio samples via
+ *         an FFT and parabolic peak interpolation.
+ * @param[in,out] samples Buffer of FFT_SIZE time-domain samples. The contents
+ *                are overwritten (windowed, transformed, then magnitudes).
+ * @return Frequency of the strongest spectral peak in Hz.
+ */
+double analysis_fft_frequency(int16_t samples[]);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

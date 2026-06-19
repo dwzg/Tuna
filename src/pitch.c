@@ -36,6 +36,7 @@ For more information, please refer to <http://unlicense.org/>
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
+#include <math.h>
 #include "pitch.h"
 
 /*---------------------------------------------------------------------------*/
@@ -43,6 +44,11 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 #define NUM_OCTAVES 9
 #define NUM_PITCH_CLASSES 12
+
+/* MIDI note 69 is A4 = 440 Hz; one octave per 12 semitones. */
+#define A4_MIDI 69
+#define A4_FREQ 440.0
+#define LN2 0.69314718055994531
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
@@ -84,8 +90,37 @@ double pitch_get_frequency(PITCH_CLASS pitch_class, uint8_t octave)
     if (octave < NUM_OCTAVES) {
         frequency = NOTES[octave][pitch_class];
     }
-    
+
     return frequency;
+}
+
+NOTE pitch_from_frequency(double frequency)
+{
+    NOTE note = { C, 0, 0.0, 0 };
+    double midi;
+    int16_t nearest;
+    int8_t octave;
+
+    if (frequency <= 0.0) {
+        return note;
+    }
+
+    /* Fractional MIDI note number, then the nearest integer semitone. */
+    midi = (double)A4_MIDI + 12.0 * (log(frequency / A4_FREQ) / LN2);
+    nearest = (int16_t)(midi + 0.5);
+
+    /* Octave numbering matches the NOTES table (octave 1 starts at C1). */
+    octave = (int8_t)(nearest / NUM_PITCH_CLASSES - 1);
+    if (octave < 0 || octave >= NUM_OCTAVES) {
+        return note;
+    }
+
+    note.pitch_class = (PITCH_CLASS)(nearest % NUM_PITCH_CLASSES);
+    note.octave = octave;
+    note.cents = (midi - (double)nearest) * 100.0;
+    note.valid = 1;
+
+    return note;
 }
 
 /*---------------------------------------------------------------------------*/

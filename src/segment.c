@@ -70,22 +70,32 @@ const uint8_t SMILE[2] = {
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
 /*---------------------------------------------------------------------------*/
-void segment_display_alpha(uint8_t digit, uint8_t alpha)
+void segment_display_char(uint8_t digit, uint8_t alpha, uint8_t dotpoint)
 {
+    uint8_t glyph;
+
     if ('A' <= alpha && alpha <= 'Z') {
-        alpha -= 'A';
+        glyph = FONT_ALPHA[alpha - 'A'];
+        if (dotpoint) {
+            glyph |= 0x80;
+        }
 
         switch (digit) {
         case 0:
-            max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_ALPHA[alpha]);
-        	break;
+            max7219_write(MAX7219_DIGIT_0_REGISTER, glyph);
+            break;
         case 1:
-            max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_ALPHA[alpha]);
+            max7219_write(MAX7219_DIGIT_1_REGISTER, glyph);
             break;
         default:
             break;
         }
     }
+}
+
+void segment_display_alpha(uint8_t digit, uint8_t alpha)
+{
+    segment_display_char(digit, alpha, 0);
 }
 
 void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)

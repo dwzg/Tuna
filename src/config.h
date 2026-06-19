@@ -68,6 +68,28 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define SHARP
 
+/**
+ * @brief Pitch-detection method. Define exactly one of the following. The two
+ *        implementations are interchangeable (both take the acquisition buffer
+ *        and return a frequency in Hz) so they can be benchmarked against each
+ *        other by toggling this switch.
+ *          PITCH_METHOD_YIN - time-domain YIN autocorrelation (default)
+ *          PITCH_METHOD_FFT - frequency-domain FFT peak picking
+ */
+#define PITCH_METHOD_YIN
+//#define PITCH_METHOD_FFT
+
+#if defined(PITCH_METHOD_YIN) == defined(PITCH_METHOD_FFT)
+#error "config.h: define exactly one of PITCH_METHOD_YIN or PITCH_METHOD_FFT"
+#endif
+
+/**
+ * @brief YIN absolute threshold. The first dip in the cumulative-mean-normalized
+ *        difference function below this value is taken as the period estimate.
+ *        Typical range 0.10 - 0.20; lower is stricter.
+ */
+#define YIN_THRESHOLD 0.15f
+
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
