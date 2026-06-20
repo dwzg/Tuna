@@ -60,7 +60,7 @@ typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
 static void display_note(double frequency);
-static uint8_t signal_is_present(void);
+static uint8_t signal_is_present(const int16_t *buffer);
 static double smooth_frequency(double raw);
 
 /*---------------------------------------------------------------------------*/
@@ -68,6 +68,10 @@ static double smooth_frequency(double raw);
 /*---------------------------------------------------------------------------*/
 CONTROL_STATE current_state = INIT;
 double peak_freq;
+
+/* The just-filled buffer being analysed, and the one the ADC is filling next. */
+static int16_t *analysis_buffer;
+static int16_t *filling_buffer;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -82,10 +86,24 @@ void control()
         hal_init();
         max7219_init();
         greet_message();
+        /* Prime the pipeline: launch the first acquisition in the background. */
+        filling_buffer = acquisition_buffer_a;
+        acquisition_start(filling_buffer);
         current_state = ACQUISITION;
     	break;
     case ACQUISITION:
-        acquisition_fill_buffer();
+        /*
+         * Collect the buffer the ADC has been filling, then immediately launch
+         * the next acquisition into the other buffer so sampling overlaps the
+         * analysis and display of this one (double-buffered pipeline). The CPU
+         * sleeps inside acquisition_wait() rather than spinning.
+         */
+        acquisition_wait();
+        analysis_buffer = filling_buffer;
+        filling_buffer = (filling_buffer == acquisition_buffer_a)
+                       ? acquisition_buffer_b
+                       : acquisition_buffer_a;
+        acquisition_start(filling_buffer);
         current_state = ANALYSIS;
         break;
     case ANALYSIS:
@@ -93,15 +111,15 @@ void control()
          * Gate on input level first: a quiet room otherwise drives the pitch
          * estimator from noise and flickers random notes. The level has to be
          * measured before analysis because both pitch methods overwrite the
-         * acquisition buffer in place.
+         * analysis buffer in place.
          */
-        if (!signal_is_present()) {
+        if (!signal_is_present(analysis_buffer)) {
             peak_freq = 0.0;
         } else {
 #if defined(PITCH_METHOD_YIN)
-            peak_freq = yin_frequency(acquisition_buffer);
+            peak_freq = yin_frequency(analysis_buffer);
 #elif defined(PITCH_METHOD_FFT)
-            peak_freq = analysis_fft_frequency(acquisition_buffer);
+            peak_freq = analysis_fft_frequency(analysis_buffer);
 #endif
         }
         peak_freq = smooth_frequency(peak_freq);
@@ -197,12 +215,12 @@ static void display_note(double frequency)
  *        whether any sample reaches SILENCE_THRESHOLD in magnitude. Returns on
  *        the first loud sample, so a present signal costs almost nothing.
  */
-static uint8_t signal_is_present(void)
+static uint8_t signal_is_present(const int16_t *buffer)
 {
     uint16_t k;
 
     for (k = 0; k < FFT_SIZE; ++k) {
-        int16_t s = acquisition_buffer[k];
+        int16_t s = buffer[k];
         if (s < 0) {
             s = (int16_t)-s;
         }

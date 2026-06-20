@@ -63,6 +63,7 @@ void hal_stop_sample_counter();
 void hal_set_din(uint8_t value);
 void hal_set_clk(uint8_t value);
 void hal_set_load(uint8_t value);
+void hal_sleep_idle(void);
 void hal_delay_ms(uint16_t ms);
 void hal_delay_us(uint16_t us);
 

@@ -46,6 +46,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
 #include <util/delay.h>
 #include "config.h"
 #include "hal.h"
@@ -145,6 +146,10 @@ void hal_init()
 
     /**
      * @brief Initialize pins used by MAX7219 display driver.
+     *        The display is bit-banged on these GPIOs: the manufactured board
+     *        wires DIN/CLK/LOAD to PC1/PC2/PC3, and no SPI0/USART pin-mux on the
+     *        AVR64DD14 can put a hardware shift clock on PC2 while driving data
+     *        on PC1, so a hardware serial peripheral cannot be used here.
      */
     init_pin(DIN_PORT, DIN_PIN, OUTPUT);
     init_pin(CLK_PORT, CLK_PIN, OUTPUT);
@@ -200,6 +205,20 @@ void hal_set_clk(uint8_t value)
 void hal_set_load(uint8_t value)
 {
     set_pin(LOAD_PORT, LOAD_PIN, value);
+}
+
+void hal_sleep_idle(void)
+{
+    /*
+     * Idle sleep stops the CPU clock but leaves the peripheral clock running,
+     * so TCA0 keeps pacing conversions, the ADC keeps sampling and the
+     * result-ready ISR still fires to wake the core. Used to spend the ~250 ms
+     * acquisition window asleep instead of spinning.
+     */
+    set_sleep_mode(SLEEP_MODE_IDLE);
+    sleep_enable();
+    sleep_cpu();
+    sleep_disable();
 }
 
 void hal_delay_ms(uint16_t ms)

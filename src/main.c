@@ -71,49 +71,6 @@ int main(void)
     for (;;) {
         control();
     }
-
-    //hal_init();
-    //max7219_init();
-    //acquisition_buffer[0] = 0;
-    //greet_message();
-    //acquisition_fill_buffer();
-//
-    //while(1)
-    //{
-        //for (uint8_t i = 1; i <= 10; ++i) {
-            //bargraph_set_range(i, BARGRAPH_FILLED);
-            //segment_display_num(i);
-            //hal_delay_ms(i * 10);
-        //}
-        //for (int8_t i = 9; i >= 0; --i) {
-            //bargraph_set_range(i, BARGRAPH_FILLED);
-            //segment_display_num(i);
-            //hal_delay_ms(i * 10);
-        //}
-        ////for (uint8_t i = 0; i < 100; ++i) {
-            ////segment_display_num(i);
-            ////hal_delay_ms(100);
-        ////}
-        ////for (int8_t i = 0; i <= BARGRAPH_SIZE; ++i) {
-            ////bargraph_set_level(i, BARGRAPH_LEFT);
-            ////hal_delay_ms(200);
-        ////}
-        ////
-        ////for (int8_t i = BARGRAPH_SIZE - 1; i >= 0; --i) {
-            ////bargraph_set_level(i, BARGRAPH_RIGHT);
-            ////hal_delay_ms(200);
-        ////}
-        ////
-        ////for (int8_t i = 1; i <= BARGRAPH_SIZE; ++i) {
-            ////bargraph_set_level(i, BARGRAPH_RIGHT);
-            ////hal_delay_ms(200);
-        ////}
-        ////
-        ////for (int8_t i = BARGRAPH_SIZE - 1; i > 0; --i) {
-            ////bargraph_set_level(i, BARGRAPH_LEFT);
-            ////hal_delay_ms(200);
-        ////}
-    //}
 }
 
 /*---------------------------------------------------------------------------*/
