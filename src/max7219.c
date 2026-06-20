@@ -66,6 +66,8 @@ For more information, please refer to <http://unlicense.org/>
  */
 void max7219_init()
 {
+    hal_set_din(LOW);
+    hal_set_clk(LOW);
     hal_set_load(HIGH);
 
     max7219_reset();
@@ -82,15 +84,18 @@ void max7219_init()
  */
 void max7219_write(uint8_t address, uint8_t data)
 {
-    /*
-     * One 16 bit frame, MSB first: address byte then data byte clocked out by
-     * SPI0. LOAD is held low for the whole frame and the rising edge on its
-     * release latches the 16 bits into the addressed register.
-     */
+    int8_t i;
+    uint8_t bit;
+    uint16_t command = ((uint16_t)address << 8) | data;
+
     hal_set_load(LOW);
 
-    hal_spi_write(address);
-    hal_spi_write(data);
+    for (i = 15; i >= 0; --i) {
+        bit = (uint8_t)((command >> i) & 0x0001);
+        hal_set_din(bit);
+        hal_set_clk(HIGH);
+        hal_set_clk(LOW);
+    }
 
     hal_set_load(HIGH);
 }

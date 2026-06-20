@@ -78,11 +78,13 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
 ### Layers
 
 - **HAL (`hal.c/.h`)** — the only hardware-touching module. Wraps ADC sampling, a
-  timer-driven "sample counter" with a callback, the hardware SPI0 link to the MAX7219
-  (`hal_spi_write()` plus the manually toggled LOAD line), an idle-sleep primitive
-  (`hal_sleep_idle()`), and busy-wait delays. Port any retargeting through here.
+  timer-driven "sample counter" with a callback, the bit-banged MAX7219 pins
+  (DIN/CLK/LOAD on PC1/PC2/PC3), an idle-sleep primitive (`hal_sleep_idle()`), and
+  busy-wait delays. Port any retargeting through here. (Hardware SPI0/USART cannot drive
+  the display: the board's clock trace is PC2, and no pin-mux on this part outputs a
+  shift clock on PC2 while driving data on PC1.)
 - **Driver (`max7219.c/.h`)** — register-level MAX7219 driver (register addresses are
-  `#define`s); clocks each 16-bit frame out through the HAL's hardware SPI.
+  `#define`s); clocks each 16-bit frame out through the HAL pin setters.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
 - **DSP (`fft.c`, `fft8.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft8` is an
