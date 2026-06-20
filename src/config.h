@@ -72,12 +72,15 @@ For more information, please refer to <http://unlicense.org/>
  * @brief Pitch-detection method. Define exactly one of the following. The two
  *        implementations are interchangeable (both take the acquisition buffer
  *        and return a frequency in Hz) so they can be benchmarked against each
- *        other by toggling this switch.
+ *        other by toggling this switch. The default below can also be overridden
+ *        from the build system (e.g. -DPITCH_METHOD_FFT) so both paths can be
+ *        compiled in CI without editing this file.
  *          PITCH_METHOD_YIN - time-domain YIN autocorrelation (default)
  *          PITCH_METHOD_FFT - frequency-domain FFT peak picking
  */
+#if !defined(PITCH_METHOD_YIN) && !defined(PITCH_METHOD_FFT)
 #define PITCH_METHOD_YIN
-//#define PITCH_METHOD_FFT
+#endif
 
 #if defined(PITCH_METHOD_YIN) == defined(PITCH_METHOD_FFT)
 #error "config.h: define exactly one of PITCH_METHOD_YIN or PITCH_METHOD_FFT"
@@ -89,6 +92,21 @@ For more information, please refer to <http://unlicense.org/>
  *        Typical range 0.10 - 0.20; lower is stricter.
  */
 #define YIN_THRESHOLD 0.15f
+
+/**
+ * @brief FFT pitch method, octave correction. The strongest spectral bin is
+ *        often a harmonic rather than the fundamental. The detector steps down
+ *        to the lowest sub-multiple (peak bin / m, for m up to
+ *        FFT_MAX_SUBHARMONIC) whose harmonic series is actually present in the
+ *        spectrum, requiring each supporting harmonic bin to reach at least
+ *        (peak >> FFT_HARMONIC_THRESHOLD_SHIFT) in magnitude. A larger shift is
+ *        a lower threshold: it recovers weaker/missing fundamentals but is more
+ *        permissive under noise. The fundamental is then read from the strong
+ *        peak divided by m, giving m times finer absolute resolution than
+ *        interpolating the low fundamental bin directly.
+ */
+#define FFT_MAX_SUBHARMONIC 4
+#define FFT_HARMONIC_THRESHOLD_SHIFT 4
 
 /**
  * @brief Peak input amplitude (in ADC counts, full scale +-2048 for the 12 bit

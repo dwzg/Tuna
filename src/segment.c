@@ -100,7 +100,7 @@ void segment_display_alpha(uint8_t digit, uint8_t alpha)
 
 void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
 {
-    if (0 <= value && value <= 9) {
+    if (value <= 9) {
         switch (digit) {
         case 0:
             if (dotpoint) {
@@ -124,7 +124,7 @@ void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
 
 void segment_display_num(uint8_t value)
 {
-    if (0 <= value && value <= 99) {
+    if (value <= 99) {
         max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_NUM[value / 10]);
         max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_NUM[value % 10]);
     }

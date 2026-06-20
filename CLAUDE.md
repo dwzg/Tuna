@@ -43,6 +43,25 @@ Key points:
 Build artifacts (`*.elf`, `*.hex`, `*.map`, `build/`, `Debug/`, `Release/`) are
 gitignored.
 
+## Testing / CI
+
+The DSP code (`fft.c`, `analysis.c`, `yin.c`) is plain integer/fixed-point C with no
+AVR dependencies, so it is exercised by **host regression tests** under `test/` that
+compile the real sources with the native compiler and check pitch detection on
+synthetic signals (CTest):
+
+```sh
+cmake -S test -B test/build
+cmake --build test/build
+ctest --test-dir test/build --output-on-failure
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs those host tests and cross-compiles the
+firmware for the AVR64DD14 for **both** pitch methods (the build forwards
+`-DPITCH_METHOD=YIN|FFT`, which `config.h` honours over its default). The device pack
+downloads on the runner, so CI performs the on-target compile. Keep new DSP behaviour
+covered by a `test/` case where practical.
+
 ## Layout
 
 - `src/` — all firmware sources; each module is a `.c` with its `.h` alongside.
@@ -87,9 +106,12 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
   `#define`s); clocks each 16-bit frame out through the HAL pin setters.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
-- **DSP (`fft.c`, `fft8.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft8` is an
-  `int8_t` variant of the `int16_t` `fft`. `pitch.c` maps frequencies to musical pitch
-  classes.
+- **DSP (`fft.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft.c` is a fixed-point
+  in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`). `analysis.c`
+  runs it as a **real-input FFT**: it packs the real signal into a half-size complex
+  FFT and splits the result, so the FFT path costs ~half the transform work and an
+  `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `pitch.c` maps
+  frequencies to musical pitch classes.
 
 ### Compile-time configuration
 

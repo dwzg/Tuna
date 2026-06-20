@@ -88,17 +88,23 @@ double yin_frequency(int16_t samples[])
 
     /*
      * Difference function d(tau) plus cumulative mean normalization in one
-     * pass. d(tau) is accumulated in 64-bit to avoid overflow: up to YIN_W
-     * terms each as large as (2*2048)^2. running_sum stays an exact integer
-     * accumulator (the running total reaches ~10^12, far beyond the 2^24 exact
-     * range of avr-gcc's 32-bit double), and the single floating-point divide is
-     * deferred to the normalization step.
+     * pass. The squared differences are summed in a 32-bit accumulator: each
+     * per-sample difference is pre-scaled by one bit (>>1) so that YIN_W terms,
+     * each at most (4095/2)^2, cannot overflow uint32. That lets the inner loop
+     * use an inline 16x16->32 widening multiply and a 32-bit add instead of the
+     * __mulsi3 (32-bit multiply) and __adddi3 (64-bit add) libgcc helper calls
+     * that otherwise run on every one of the YIN_W * YIN_TAU_MAX iterations and
+     * dominate the cost on an 8-bit AVR. The 1-bit scale cancels in the cmnd
+     * ratio, so it does not affect the result. running_sum stays a 64-bit
+     * accumulator (its total reaches ~10^11, beyond uint32) but is updated only
+     * once per tau, and the single floating-point divide is deferred to the
+     * normalization step.
      */
     for (tau = 1; tau < YIN_TAU_MAX; ++tau) {
-        uint64_t acc = 0;
+        uint32_t acc = 0;
         for (j = 0; j < YIN_W; ++j) {
-            int32_t diff = (int32_t)samples[j] - (int32_t)samples[j + tau];
-            acc += (uint64_t)(diff * diff);
+            int16_t d = (int16_t)((samples[j] - samples[j + tau]) >> 1);
+            acc += (uint32_t)((int32_t)d * d);
         }
         running_sum += acc;
         cmnd[tau] = (running_sum > 0)

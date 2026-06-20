@@ -55,8 +55,24 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
+/**
+ * @brief In-place forward/inverse complex fast Fourier transform.
+ */
 int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse);
-int16_t fft_real(int16_t f[], int16_t m, uint8_t inverse);
+
+/**
+ * @brief Fixed-point Q15 multiply with rounding (exposed for the real-FFT
+ *        split step in analysis.c).
+ */
+int16_t fix_mpy(int16_t a, int16_t b);
+
+/**
+ * @brief Quarter-wave-plus sine table, SINEWAVE[i] = sin(2*pi*i/FFT_SIZE) in
+ *        Q15. Holds 3/4 of a period (indices 0 .. 3*FFT_SIZE/4 - 1); cosine is
+ *        read as SINEWAVE[i + FFT_SIZE/4]. Shared by fft() and the real-FFT
+ *        twiddle factors.
+ */
+extern const int16_t SINEWAVE[];
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

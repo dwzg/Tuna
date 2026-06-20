@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Host-side DSP regression tests (native compiler, no AVR toolchain). The
+  # fixed-point DSP runs identically here and on the target.
+  # ---------------------------------------------------------------------------
+  host-tests:
+    name: Host DSP tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S test -B test/build
+      - name: Build
+        run: cmake --build test/build
+      - name: Run tests
+        run: ctest --test-dir test/build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  # Cross-compile the firmware for the AVR64DD14, for both pitch methods so the
+  # FFT and YIN paths are each compile-checked on the real toolchain.
+  # ---------------------------------------------------------------------------
+  firmware:
+    name: Firmware build (${{ matrix.pitch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pitch: [YIN, FFT]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AVR toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-avr avr-libc binutils-avr
+
+      # The AVR-Dx Device Family Pack is fetched at configure time via
+      # FetchContent. Cache it so only the first run downloads it.
+      - name: Cache AVR-Dx device pack
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: avr-dfp-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/avr-toolchain.cmake -DPITCH_METHOD=${{ matrix.pitch }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Size report
+        run: |
+          echo "### Firmware size — ${{ matrix.pitch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          avr-size build/Tuna.elf >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuna-${{ matrix.pitch }}
+          path: |
+            build/Tuna.hex
+            build/Tuna.elf
+            build/Tuna.map
+          if-no-files-found: error
