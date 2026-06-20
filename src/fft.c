@@ -314,50 +314,6 @@ int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse)
 	return scale;
 }
 
-/**
- * @brief Perform forward/inverse FFT on array of real numbers.
- *        Real FFT/iFFT using half-size complex FFT by distributing
- *        even/odd samples into real/imaginary arrays respectively.
- * @param[in,out] fr Array of real values.
- * @param[in,out] fi Array of imaginary values.
- * @param[in] m log2 of FFT size
- * @param[in] inverse Flag for forward (zero) or inverse (non-zero) FFT.
- * @return Scaling factor for inverse FFT.
- */
-int16_t fft_real(int16_t f[], int16_t m, uint8_t inverse)
-{
-	int16_t i, N = 1 << (m - 1), scale = 0;
-	int16_t tt, * fr = f, * fi = &f[N];
-
-	if (inverse) {
-		scale = fft(fi, fr, m - 1, inverse);
-	}
-
-    /*
-     * In order to save data space (i.e. to avoid two arrays, one
-     * for real, one for imaginary samples), we proceed in the
-     * following two steps: a) samples are rearranged in the real
-     * array so that all even samples are in places 0-(N/2-1) and
-     * all imaginary samples in places (N/2)-(N-1), and b) fix_fft
-     * is called with fr and fi pointing to index 0 and index N/2
-     * respectively in the original array. The above guarantees
-     * that fix_fft "sees" consecutive real samples as alternating
-     * real and imaginary samples in the complex array.
-     */
-
-	for (i = 1; i < N; i += 2) {
-		tt = f[N + i - 1];
-		f[N + i - 1] = f[i];
-		f[i] = tt;
-	}
-
-	if (!inverse) {
-		scale = fft(fi, fr, m - 1, inverse);
-	}
-
-	return scale;
-}
-
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/

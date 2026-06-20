@@ -87,9 +87,12 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
   `#define`s); clocks each 16-bit frame out through the HAL pin setters.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
-- **DSP (`fft.c`, `fft8.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft8` is an
-  `int8_t` variant of the `int16_t` `fft`. `pitch.c` maps frequencies to musical pitch
-  classes.
+- **DSP (`fft.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft.c` is a fixed-point
+  in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`). `analysis.c`
+  runs it as a **real-input FFT**: it packs the real signal into a half-size complex
+  FFT and splits the result, so the FFT path costs ~half the transform work and an
+  `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `pitch.c` maps
+  frequencies to musical pitch classes.
 
 ### Compile-time configuration
 

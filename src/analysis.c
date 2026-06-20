@@ -58,12 +58,18 @@ For more information, please refer to <http://unlicense.org/>
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
 static uint32_t isqrt_rounded(uint32_t a_nInput);
+static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint16_t k);
+static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-/* Imaginary part of the complex FFT (real part lives in the caller's buffer). */
-static int16_t fft_imag[FFT_SIZE];
+/*
+ * Imaginary half of the N/2-point complex FFT used by the real-input transform
+ * (the real half is the caller's buffer). Only FFT_SIZE/2 entries are needed,
+ * half the storage of a full complex imaginary buffer.
+ */
+static int16_t fft_scratch[SPECTRUM_BINS];
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -94,24 +100,51 @@ double analysis_fft_frequency(int16_t samples[])
     window_apply_window(samples);
 
     /*
-     * Full complex FFT of the real input (imaginary part zeroed). Unlike a
-     * packed real-FFT this needs a second buffer, but it yields the true
-     * spectrum so that bin k maps to frequency k * SAMPLE_FREQ / FFT_SIZE.
+     * Real-input FFT. The real signal is packed into a half-size complex
+     * sequence z[n] = x[2n] + j*x[2n+1], transformed with an N/2-point complex
+     * FFT, and a split step then recovers the N/2+1 magnitude bins of the true
+     * N-point spectrum. This halves both the transform work and the RAM (one
+     * N/2 scratch array instead of a full FFT_SIZE imaginary buffer) compared
+     * with running a full complex FFT on a zeroed imaginary part.
+     *
+     * Pack: the odd samples go to the scratch (imaginary) array and the even
+     * samples are compacted into the low half of the caller's buffer. The
+     * even compaction reads ahead of where it writes, so it is safe in place.
      */
-    for (i = 0; i < FFT_SIZE; ++i) {
-        fft_imag[i] = 0;
+    for (i = 0; i < SPECTRUM_BINS; ++i) {
+        fft_scratch[i] = samples[2 * i + 1];
     }
-    fft(samples, fft_imag, LOG2_FFT_SIZE, 0);
+    for (i = 0; i < SPECTRUM_BINS; ++i) {
+        samples[i] = samples[2 * i];
+    }
+
+    fft(samples, fft_scratch, LOG2_FFT_SIZE - 1, 0);
 
     /*
-     * Magnitude spectrum, written in place over the (no longer needed) real
-     * part. The forward FFT applies 1/FFT_SIZE fixed scaling, so magnitudes
-     * stay well within int16_t range.
+     * Split the N/2-point spectrum Z (real in samples[], imaginary in
+     * fft_scratch[]) into the magnitude spectrum, written back in place over
+     * samples[0..SPECTRUM_BINS]. Each bin k combines Z[k] with its mirror
+     * Z[N/2-k], so the pair {k, N/2-k} is computed and written together to
+     * avoid clobbering a value the mirror still needs.
      */
-    for (i = 0; i <= SPECTRUM_BINS; ++i) {
-        uint32_t real = (uint32_t)((int32_t)samples[i] * (int32_t)samples[i]);
-        uint32_t imag = (uint32_t)((int32_t)fft_imag[i] * (int32_t)fft_imag[i]);
-        samples[i] = (int16_t)isqrt_rounded(real + imag);
+    {
+        int16_t dc_mag = real_dc_nyquist_mag(samples[0], fft_scratch[0], 1);
+        int16_t nyquist_mag = real_dc_nyquist_mag(samples[0], fft_scratch[0], -1);
+        uint16_t k;
+
+        for (k = 1; k < SPECTRUM_BINS - k; ++k) {
+            uint16_t m = SPECTRUM_BINS - k;
+            int16_t mag_k = real_bin_mag(samples[k], fft_scratch[k], samples[m], fft_scratch[m], k);
+            int16_t mag_m = real_bin_mag(samples[m], fft_scratch[m], samples[k], fft_scratch[k], m);
+            samples[k] = mag_k;
+            samples[m] = mag_m;
+        }
+        /* Self-mirrored centre bin (k == N/2-k). */
+        samples[SPECTRUM_BINS / 2] = real_bin_mag(samples[SPECTRUM_BINS / 2], fft_scratch[SPECTRUM_BINS / 2],
+                                                  samples[SPECTRUM_BINS / 2], fft_scratch[SPECTRUM_BINS / 2],
+                                                  SPECTRUM_BINS / 2);
+        samples[0] = dc_mag;
+        samples[SPECTRUM_BINS] = nyquist_mag;
     }
 
     /* Strongest bin, skipping DC (bin 0). */
@@ -173,6 +206,49 @@ static uint32_t isqrt_rounded(uint32_t a_nInput)
     }
 
     return res;
+}
+
+/**
+ * @brief Magnitude of true-spectrum bin k from the half-size complex FFT.
+ *        Recombines Z[k] = (ar, ai) with its mirror Z[N/2-k] = (br, bi) using
+ *        the standard real-FFT split, then applies the bin's twiddle factor
+ *        W = exp(-j*2*pi*k/N). All intermediates stay in int16/int32 range
+ *        (the two >>1 keep the squared magnitude inside uint32). The result is
+ *        a consistently-scaled magnitude; only relative bin heights matter for
+ *        peak picking.
+ * @param[in] ar,ai  Real/imaginary parts of Z[k].
+ * @param[in] br,bi  Real/imaginary parts of the mirror Z[N/2-k].
+ * @param[in] k      Bin index (1 .. N/2-1).
+ * @return Magnitude of spectral bin k.
+ */
+static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint16_t k)
+{
+    int16_t xer  = (int16_t)(((int32_t)ar + br) >> 1);  /* even-sample spectrum */
+    int16_t xei  = (int16_t)(((int32_t)ai - bi) >> 1);
+    int16_t xor_ = (int16_t)(((int32_t)ai + bi) >> 1);  /* odd-sample spectrum */
+    int16_t xoi  = (int16_t)(((int32_t)br - ar) >> 1);
+    int16_t wr = SINEWAVE[k + FFT_SIZE / 4];            /*  cos(2*pi*k/N) */
+    int16_t wi = (int16_t)(-SINEWAVE[k]);               /* -sin(2*pi*k/N) */
+    int16_t pr = (int16_t)(fix_mpy(wr, xor_) - fix_mpy(wi, xoi));
+    int16_t pi = (int16_t)(fix_mpy(wr, xoi) + fix_mpy(wi, xor_));
+    int32_t xr = ((int32_t)xer + pr) >> 1;
+    int32_t xi = ((int32_t)xei + pi) >> 1;
+    uint32_t s = (uint32_t)(xr * xr) + (uint32_t)(xi * xi);
+
+    return (int16_t)isqrt_rounded(s);
+}
+
+/**
+ * @brief Magnitude of the purely-real DC (sign > 0) or Nyquist (sign < 0) bin,
+ *        which derive from Z[0] alone. Scaled to match real_bin_mag().
+ */
+static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign)
+{
+    int32_t v = (sign >= 0) ? ((int32_t)zr + zi) : ((int32_t)zr - zi);
+
+    v >>= 2;
+
+    return (int16_t)(v < 0 ? -v : v);
 }
 
 #endif /* PITCH_METHOD_FFT */
