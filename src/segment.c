@@ -121,14 +121,6 @@ void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
     }
 }
 
-void segment_display_num(uint8_t value)
-{
-    if (value <= 99) {
-        max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_NUM[value / 10]);
-        max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_NUM[value % 10]);
-    }
-}
-
 void segment_smile(void)
 {
     max7219_write(MAX7219_DIGIT_0_REGISTER, SMILE[0]);

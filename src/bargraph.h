@@ -50,9 +50,6 @@ For more information, please refer to <http://unlicense.org/>
 #define BARGRAPH_LEFT 0
 #define BARGRAPH_RIGHT 1
 
-#define BARGRAPH_UNFILLED 0
-#define BARGRAPH_FILLED 1
-
 #define BARGRAPH_SIZE 20
 
 /*---------------------------------------------------------------------------*/
@@ -67,9 +64,7 @@ For more information, please refer to <http://unlicense.org/>
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
 void bargraph_set_element(uint8_t element, uint8_t value);
-uint8_t bargraph_get_element(uint8_t element);
 void bargraph_set_level(uint8_t level, uint8_t origin);
-void bargraph_set_range(uint8_t range, uint8_t fill);
 void bargraph_set_binary(int16_t value);
 
 /*---------------------------------------------------------------------------*/

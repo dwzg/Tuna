@@ -96,22 +96,6 @@ void bargraph_set_element(uint8_t element, uint8_t value)
 }
 
 /**
- * @brief Gets the current value of a given element of the bar graph.
- * @param[in] element Bar graph element to set, going left to right.
- * @return Value of the element.
- */
-uint8_t bargraph_get_element(uint8_t element)
-{
-    uint8_t value = 0;
-
-    if (element < BARGRAPH_SIZE) {
-        value = (uint8_t)((bargraph_state & (1UL << element)) >> element);
-    }
-
-    return value;
-}
-
-/**
  * @brief Sets the bar graph to a given level bar starting from origin.
  * @param[in] level Level bar to display.
  * @param[in] origin Origin of the level bar.
@@ -130,31 +114,6 @@ void bargraph_set_level(uint8_t level, uint8_t origin)
     }
 
     bargraph_send_data();
-}
-
-/**
- * @brief Sets the bar graph to a given centered range.
- * @param[in] range Half width of the range.
- * @param[in] fill Flag to fill the inside of the range.
- */
-void bargraph_set_range(uint8_t range, uint8_t fill)
-{
-    uint32_t bit_mask;
-    uint8_t MAX_RANGE = BARGRAPH_SIZE / 2;
-
-    if (range <= MAX_RANGE) {
-        if (range == 0) {
-            bargraph_state = 0;
-        } else if (fill) {
-            bit_mask = (1UL << (range * 2)) - 1UL;
-            bargraph_state = bit_mask << (MAX_RANGE - range);
-        } else {
-            bargraph_state = (1UL << (MAX_RANGE - range));
-            bargraph_state |= (1UL << (MAX_RANGE - 1 + range));
-        }
-
-        bargraph_send_data();
-    }
 }
 
 void bargraph_set_binary(int16_t value)

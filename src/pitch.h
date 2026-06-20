@@ -61,7 +61,7 @@ typedef enum {
  */
 typedef struct {
     PITCH_CLASS pitch_class; /**< Nearest pitch class (C .. H).             */
-    int8_t octave;           /**< Octave index, matching pitch_get_frequency. */
+    int8_t octave;           /**< Octave index (octave 1 starts at C1).      */
     double cents;            /**< Deviation from the note, -50 .. +50 cents. */
     uint8_t valid;           /**< Non-zero if frequency mapped to a note.   */
 } NOTE;
@@ -73,8 +73,6 @@ typedef struct {
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-double pitch_get_frequency(PITCH_CLASS pitch_class, uint8_t octave);
-
 /**
  * @brief  Map a measured frequency to the nearest equal-tempered note (A4=440).
  * @param[in] frequency Measured frequency in Hz.

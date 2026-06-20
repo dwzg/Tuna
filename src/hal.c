@@ -126,7 +126,8 @@ void hal_init(void)
     /**
      * @brief Enable the ADC in single-ended 12 bit mode (CONVMODE defaults to
      *        single-ended). The AC-coupled, VDD/2-biased input is re-centred
-     *        to a signed value in hal_get_adc_sample().
+     *        to a signed value by subtracting ADC_ZERO_OFFSET as each result is
+     *        read in the result-ready ISR.
      */
     ADC0.CTRLA = ADC_ENABLE_bm
                | ADC_RESSEL_12BIT_gc;
@@ -162,19 +163,6 @@ void hal_init(void)
     init_pin(LOAD_PORT, LOAD_PIN, OUTPUT);
 
     sei();
-}
-
-int16_t hal_get_adc_sample(void)
-{
-    int16_t sample;
-
-    ADC0.COMMAND = ADC_STCONV_bm;
-
-    while (!(ADC0.INTFLAGS & ADC_RESRDY_bm));
-
-    sample = ((int16_t)ADC0.RES) - ADC_ZERO_OFFSET;
-
-    return sample;
 }
 
 void hal_start_sample_counter(HAL_SAMPLE_COUNTER_CALLBACK callback)
