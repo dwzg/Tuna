@@ -86,13 +86,18 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
 
 1. **acquisition** — `acquisition_start()` kicks off a background fill from the ADC and
    `acquisition_wait()` blocks (sleeping the CPU between samples) until it completes.
-2. **window** — `window_apply_window()` applies the window selected in `config.h`.
-3. **fft** — `fft_real()` does an in-place real FFT (fixed-point; see `fix_mpy` in
-   `fft.c`).
-4. **analysis** — `analysis_absolute()` converts to magnitudes, then
-   `analysis_find_interpolated_peak_frequency()` returns the peak frequency (with
-   sub-bin interpolation).
-5. **display** — `segment_*` / `bargraph_*` push the result out through the MAX7219.
+2. **analysis** — the frame is gated on input level (`signal_is_present()`), then the
+   pitch method selected in `config.h` estimates the fundamental frequency:
+   - **YIN** (default) — `yin_frequency()` (`yin.c`) does a time-domain autocorrelation
+     estimate; no windowing/FFT involved.
+   - **FFT** — `analysis_fft_frequency()` (`analysis.c`) removes DC, applies
+     `window_apply_window()`, runs `fft()` (`fft.c`) as an in-place real-input transform
+     (fixed-point; see `fix_mpy`), converts to magnitudes and returns the
+     parabolically-interpolated peak frequency with HPS-style octave correction.
+
+   `smooth_frequency()` (`control.c`) then stabilises the per-frame estimate.
+3. **display** — `pitch_from_frequency()` maps the frequency to a note, then `segment_*`
+   / `bargraph_*` push the result out through the MAX7219.
 
 ### Layers
 
@@ -106,11 +111,12 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
   `#define`s); clocks each 16-bit frame out through the HAL pin setters.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
-- **DSP (`fft.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft.c` is a fixed-point
-  in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`). `analysis.c`
-  runs it as a **real-input FFT**: it packs the real signal into a half-size complex
-  FFT and splits the result, so the FFT path costs ~half the transform work and an
-  `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `pitch.c` maps
+- **DSP (`fft.c`, `window.c`, `analysis.c`, `yin.c`, `pitch.c`)** — `fft.c` is a
+  fixed-point in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`).
+  `analysis.c` runs it as a **real-input FFT**: it packs the real signal into a half-size
+  complex FFT and splits the result, so the FFT path costs ~half the transform work and
+  an `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `yin.c` is the
+  alternative time-domain (YIN autocorrelation) pitch estimator. `pitch.c` maps
   frequencies to musical pitch classes.
 
 ### Compile-time configuration

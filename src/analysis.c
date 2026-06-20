@@ -57,7 +57,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
-static uint32_t isqrt_rounded(uint32_t a_nInput);
+static uint32_t isqrt_rounded(uint32_t value);
 static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint16_t k);
 static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign);
 static uint8_t fundamental_divisor(const int16_t spectrum[], uint16_t peak_bin, int16_t peak);
@@ -188,12 +188,12 @@ double analysis_fft_frequency(int16_t samples[])
 
 /**
  * @brief    Fast integer square root, with arithmetic rounding.
- * @param[in] a_nInput - unsigned integer for which to find the square root
+ * @param[in] value Unsigned integer for which to find the square root.
  * @return Integer square root of the input value.
  */
-static uint32_t isqrt_rounded(uint32_t a_nInput)
+static uint32_t isqrt_rounded(uint32_t value)
 {
-    uint32_t op  = a_nInput;
+    uint32_t op  = value;
     uint32_t res = 0;
     uint32_t one = 1UL << 30; /* highest power of four <= 2^32 */
 

@@ -62,6 +62,12 @@ For more information, please refer to <http://unlicense.org/>
 
 #define COUNTER_TOP_VALUE (((F_CPU)/(SAMPLE_FREQ)) - 1UL)
 
+/*
+ * Mid-scale of the 12 bit single-ended ADC result (0..4095). Subtracting it
+ * re-centres the AC-coupled, VDD/2-biased conversion to a signed -2048..2047.
+ */
+#define ADC_ZERO_OFFSET (1 << 11)
+
 #define DIN_PORT &PORTC
 #define DIN_PIN PIN1_bp
 
@@ -78,18 +84,18 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
-void init_pin(PORT_t *port, uint8_t pin, uint8_t dir);
-void set_pin(PORT_t *port, uint8_t pin, uint8_t value);
+static void init_pin(PORT_t *port, uint8_t pin, uint8_t dir);
+static void set_pin(PORT_t *port, uint8_t pin, uint8_t value);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-HAL_SAMPLE_COUNTER_CALLBACK sample_counter_callback;
+static HAL_SAMPLE_COUNTER_CALLBACK sample_counter_callback;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
 /*---------------------------------------------------------------------------*/
-void hal_init()
+void hal_init(void)
 {
     cli();
 
@@ -158,7 +164,7 @@ void hal_init()
     sei();
 }
 
-int16_t hal_get_adc_sample()
+int16_t hal_get_adc_sample(void)
 {
     int16_t sample;
 
@@ -166,8 +172,7 @@ int16_t hal_get_adc_sample()
 
     while (!(ADC0.INTFLAGS & ADC_RESRDY_bm));
 
-    /* Single-ended 12 bit result is 0..4095; re-centre to -2048..2047. */
-    sample = ((int16_t)ADC0.RES) - (1 << 11);
+    sample = ((int16_t)ADC0.RES) - ADC_ZERO_OFFSET;
 
     return sample;
 }
@@ -183,7 +188,7 @@ void hal_start_sample_counter(HAL_SAMPLE_COUNTER_CALLBACK callback)
     TCA0.SINGLE.CTRLA |= TCA_SINGLE_ENABLE_bm;
 }
 
-void hal_stop_sample_counter()
+void hal_stop_sample_counter(void)
 {
     TCA0.SINGLE.CTRLA &= ~(TCA_SINGLE_ENABLE_bm);
     TCA0.SINGLE.CNT = 0;
@@ -231,20 +236,20 @@ void hal_delay_us(uint16_t us)
     _delay_us((double)us);
 }
 
-void init_pin(PORT_t *port, uint8_t pin, uint8_t dir)
+static void init_pin(PORT_t *port, uint8_t pin, uint8_t dir)
 {
     if (dir == OUTPUT) {
         port->DIRSET |= (1 << pin);
-        } else {
+    } else {
         port->DIRCLR |= (1 << pin);
     }
 }
 
-void set_pin(PORT_t *port, uint8_t pin, uint8_t value)
+static void set_pin(PORT_t *port, uint8_t pin, uint8_t value)
 {
     if (value == HIGH) {
         port->OUTSET |= (1 << pin);
-        } else {
+    } else {
         port->OUTCLR |= (1 << pin);
     }
 }
@@ -253,7 +258,7 @@ ISR(ADC0_RESRDY_vect)
 {
     /* Reading the result register clears the result-ready flag. The conversion
      * was started in hardware by the timer overflow event. */
-    int16_t sample = ((int16_t)ADC0.RES) - (1 << 11);
+    int16_t sample = ((int16_t)ADC0.RES) - ADC_ZERO_OFFSET;
 
     sample_counter_callback(sample);
 }

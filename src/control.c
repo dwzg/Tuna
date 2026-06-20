@@ -59,6 +59,7 @@ typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
+static void greet_message(void);
 static void display_note(double frequency);
 static uint8_t signal_is_present(const int16_t *buffer);
 static double smooth_frequency(double raw);
@@ -66,8 +67,8 @@ static double smooth_frequency(double raw);
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-CONTROL_STATE current_state = INIT;
-double peak_freq;
+static CONTROL_STATE current_state = INIT;
+static double peak_freq;
 
 /* The just-filled buffer being analysed, and the one the ADC is filling next. */
 static int16_t *analysis_buffer;
@@ -90,7 +91,7 @@ void control()
         filling_buffer = acquisition_buffer_a;
         acquisition_start(filling_buffer);
         current_state = ACQUISITION;
-    	break;
+        break;
     case ACQUISITION:
         /*
          * Collect the buffer the ADC has been filling, then immediately launch
@@ -140,7 +141,7 @@ void control()
     }
 }
 
-void greet_message()
+static void greet_message(void)
 {
     bargraph_set_level(6, BARGRAPH_LEFT);
     segment_display_alpha(0, 'H');
@@ -165,8 +166,8 @@ void greet_message()
 
     hal_delay_ms(500);
 
-    max7219_write(0x01, 0);
-    max7219_write(0x02, 0);
+    max7219_write(MAX7219_DIGIT_0_REGISTER, 0);
+    max7219_write(MAX7219_DIGIT_1_REGISTER, 0);
     bargraph_set_level(0, BARGRAPH_LEFT);
 }
 

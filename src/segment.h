@@ -59,7 +59,7 @@ void segment_display_char(uint8_t digit, uint8_t alpha, uint8_t dotpoint);
 void segment_display_alpha(uint8_t digit, uint8_t alpha);
 void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint);
 void segment_display_num(uint8_t value);
-void segment_smile();
+void segment_smile(void);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

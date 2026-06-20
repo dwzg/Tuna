@@ -64,17 +64,17 @@ For more information, please refer to <http://unlicense.org/>
 /**
  * @brief Initialize MAX7219 for intended usage.
  */
-void max7219_init()
+void max7219_init(void)
 {
     hal_set_din(LOW);
     hal_set_clk(LOW);
     hal_set_load(HIGH);
 
     max7219_reset();
-    
-    max7219_write(MAX7219_SCAN_LIMIT_REGISTER, 0x04); // set scan limit to digit 0 to 4
-    max7219_write(MAX7219_INTENSITY_REGISTER, 0x07); // set intensity to max
-    max7219_write(MAX7219_SHUTDOWN_REGISTER, 0x01); // set shutdown register to normal operation
+
+    max7219_write(MAX7219_SCAN_LIMIT_REGISTER, 0x04); /* scan digits 0 to 4 */
+    max7219_write(MAX7219_INTENSITY_REGISTER, 0x07);  /* intensity to max */
+    max7219_write(MAX7219_SHUTDOWN_REGISTER, 0x01);   /* normal operation */
 }
 
 /**
@@ -103,10 +103,10 @@ void max7219_write(uint8_t address, uint8_t data)
 /**
  * @brief Reset all registers to zero.
  */
-void max7219_reset()
+void max7219_reset(void)
 {
     uint8_t address;
-    
+
     for (address = 0x00; address <= MAX7219_MAX_ADDRESS; ++address) {
         max7219_write(address, 0x00);
     }

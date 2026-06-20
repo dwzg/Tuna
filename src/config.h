@@ -124,8 +124,8 @@ For more information, please refer to <http://unlicense.org/>
 
 /**
  * @brief Number of consecutive frames an octave jump must persist before it is
- *        accepted as a real octave change rather than a transient YIN
- *        half/double-pitch error.
+ *        accepted as a real octave change rather than a transient half/double-
+ *        pitch error from the pitch estimator.
  */
 #define OCTAVE_GIVE_IN 3
 

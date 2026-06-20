@@ -51,11 +51,12 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
+static void bargraph_send_data(void);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-uint32_t bargraph_state = 0;
+static uint32_t bargraph_state = 0;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -63,7 +64,7 @@ uint32_t bargraph_state = 0;
 /**
  * @brief Send current bar graph state to the display driver.
  */
-void bargraph_send_data()
+static void bargraph_send_data(void)
 {
     uint8_t data_dig_2, data_dig_3, data_dig_4;
 
