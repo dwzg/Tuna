@@ -48,6 +48,13 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE "${CMAKE_SOURCE_DIR}/src"
 target_compile_definitions(${PROJECT_NAME}.elf PRIVATE F_CPU=${F_CPU})
 target_include_directories(${PROJECT_NAME}.elf SYSTEM PRIVATE "${AVR_DFP}/include")
 
+# Optionally override the pitch method selected in config.h (YIN or FFT). Empty
+# uses the config.h default. Mostly for CI, to compile-check both paths.
+set(PITCH_METHOD "" CACHE STRING "Pitch method override: YIN or FFT (empty = config.h default)")
+if(PITCH_METHOD)
+    target_compile_definitions(${PROJECT_NAME}.elf PRIVATE PITCH_METHOD_${PITCH_METHOD})
+endif()
+
 target_compile_options(${PROJECT_NAME}.elf PRIVATE
     ${MCU_FLAGS}
     -Os -flto

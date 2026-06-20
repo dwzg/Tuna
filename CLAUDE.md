@@ -43,6 +43,25 @@ Key points:
 Build artifacts (`*.elf`, `*.hex`, `*.map`, `build/`, `Debug/`, `Release/`) are
 gitignored.
 
+## Testing / CI
+
+The DSP code (`fft.c`, `analysis.c`, `yin.c`) is plain integer/fixed-point C with no
+AVR dependencies, so it is exercised by **host regression tests** under `test/` that
+compile the real sources with the native compiler and check pitch detection on
+synthetic signals (CTest):
+
+```sh
+cmake -S test -B test/build
+cmake --build test/build
+ctest --test-dir test/build --output-on-failure
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs those host tests and cross-compiles the
+firmware for the AVR64DD14 for **both** pitch methods (the build forwards
+`-DPITCH_METHOD=YIN|FFT`, which `config.h` honours over its default). The device pack
+downloads on the runner, so CI performs the on-target compile. Keep new DSP behaviour
+covered by a `test/` case where practical.
+
 ## Layout
 
 - `src/` — all firmware sources; each module is a `.c` with its `.h` alongside.

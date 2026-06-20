@@ -72,12 +72,15 @@ For more information, please refer to <http://unlicense.org/>
  * @brief Pitch-detection method. Define exactly one of the following. The two
  *        implementations are interchangeable (both take the acquisition buffer
  *        and return a frequency in Hz) so they can be benchmarked against each
- *        other by toggling this switch.
+ *        other by toggling this switch. The default below can also be overridden
+ *        from the build system (e.g. -DPITCH_METHOD_FFT) so both paths can be
+ *        compiled in CI without editing this file.
  *          PITCH_METHOD_YIN - time-domain YIN autocorrelation (default)
  *          PITCH_METHOD_FFT - frequency-domain FFT peak picking
  */
+#if !defined(PITCH_METHOD_YIN) && !defined(PITCH_METHOD_FFT)
 #define PITCH_METHOD_YIN
-//#define PITCH_METHOD_FFT
+#endif
 
 #if defined(PITCH_METHOD_YIN) == defined(PITCH_METHOD_FFT)
 #error "config.h: define exactly one of PITCH_METHOD_YIN or PITCH_METHOD_FFT"
