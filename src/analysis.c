@@ -60,6 +60,7 @@ For more information, please refer to <http://unlicense.org/>
 static uint32_t isqrt_rounded(uint32_t a_nInput);
 static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint16_t k);
 static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign);
+static uint8_t fundamental_divisor(const int16_t spectrum[], uint16_t peak_bin, int16_t peak);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
@@ -79,6 +80,7 @@ double analysis_fft_frequency(int16_t samples[])
     uint16_t i;
     uint16_t max_index;
     int16_t max;
+    uint8_t harmonic_number;
     int32_t mean = 0;
     double freq_bin = (double)SAMPLE_FREQ / (double)FFT_SIZE;
     double delta = 0.0;
@@ -147,7 +149,7 @@ double analysis_fft_frequency(int16_t samples[])
         samples[SPECTRUM_BINS] = nyquist_mag;
     }
 
-    /* Strongest bin, skipping DC (bin 0). */
+    /* Strongest (and best frequency-resolved) bin, skipping DC (bin 0). */
     max = samples[1];
     max_index = 1;
     for (i = 2; i <= SPECTRUM_BINS; ++i) {
@@ -158,10 +160,18 @@ double analysis_fft_frequency(int16_t samples[])
     }
 
     /*
+     * Octave correction: the strongest bin is frequently a harmonic rather than
+     * the fundamental, so resolve which sub-multiple of it the fundamental is.
+     */
+    harmonic_number = fundamental_divisor(samples, max_index, max);
+
+    /*
      * Parabolic interpolation in bin space for sub-bin frequency resolution.
      * The parabola is fitted to the log magnitudes, which is the more accurate
      * peak estimator for the (near-Gaussian) main lobe of a window; the +1
-     * keeps log() finite for an empty bin.
+     * keeps log() finite for an empty bin. The peak is interpolated (not the
+     * possibly-weak fundamental bin) and divided down, so the fundamental is
+     * resolved at harmonic_number times finer absolute resolution.
      */
     if (max_index > 0 && max_index < SPECTRUM_BINS) {
         double y0 = log((double)samples[max_index - 1] + 1.0);
@@ -173,7 +183,7 @@ double analysis_fft_frequency(int16_t samples[])
         }
     }
 
-    return ((double)max_index + delta) * freq_bin;
+    return ((double)max_index + delta) * freq_bin / (double)harmonic_number;
 }
 
 /**
@@ -249,6 +259,58 @@ static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign)
     v >>= 2;
 
     return (int16_t)(v < 0 ? -v : v);
+}
+
+/**
+ * @brief Decide which sub-multiple of the strongest bin is the true
+ *        fundamental (HPS-style octave correction). Steps down from peak_bin to
+ *        the lowest divisor m (up to FFT_MAX_SUBHARMONIC) for which every
+ *        harmonic of peak_bin/m up to the peak is present in the spectrum --
+ *        i.e. reaches (peak >> FFT_HARMONIC_THRESHOLD_SHIFT). Each harmonic is
+ *        checked over a +-1 bin neighbourhood so an off-grid fundamental still
+ *        registers. A pure tone has no supporting sub-harmonics and stays at
+ *        m = 1.
+ * @return The harmonic number m of peak_bin (1 = peak is the fundamental).
+ */
+static uint8_t fundamental_divisor(const int16_t spectrum[], uint16_t peak_bin, int16_t peak)
+{
+    int16_t threshold = (int16_t)(peak >> FFT_HARMONIC_THRESHOLD_SHIFT);
+    uint8_t divisor = 1;
+    uint8_t m;
+
+    for (m = 2; m <= FFT_MAX_SUBHARMONIC; ++m) {
+        uint16_t fundamental = (uint16_t)((peak_bin + m / 2) / m);
+        uint8_t supported = 1;
+        uint8_t j;
+
+        if (fundamental < 2) {
+            break;
+        }
+
+        /* Check the fundamental and the intermediate harmonics (j = m is the
+         * peak itself, present by definition). */
+        for (j = 1; j < m; ++j) {
+            uint16_t b = (uint16_t)(((uint32_t)j * peak_bin + m / 2) / m);
+            int16_t mag = spectrum[b];
+
+            if (spectrum[b - 1] > mag) {
+                mag = spectrum[b - 1];
+            }
+            if (b + 1 <= SPECTRUM_BINS && spectrum[b + 1] > mag) {
+                mag = spectrum[b + 1];
+            }
+            if (mag < threshold) {
+                supported = 0;
+                break;
+            }
+        }
+
+        if (supported) {
+            divisor = m; /* lowest supported sub-harmonic wins */
+        }
+    }
+
+    return divisor;
 }
 
 #endif /* PITCH_METHOD_FFT */
