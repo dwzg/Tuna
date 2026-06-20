@@ -46,6 +46,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
 #include <util/delay.h>
 #include "config.h"
 #include "hal.h"
@@ -61,14 +62,22 @@ For more information, please refer to <http://unlicense.org/>
 
 #define COUNTER_TOP_VALUE (((F_CPU)/(SAMPLE_FREQ)) - 1UL)
 
-#define DIN_PORT &PORTC
-#define DIN_PIN PIN1_bp
-
-#define CLK_PORT &PORTC
-#define CLK_PIN PIN2_bp
-
+/*
+ * MAX7219 link. The serial data and clock are driven by the hardware SPI0
+ * peripheral (PORTMUX ALT6: MOSI=PC1, SCK=PC3); only the load/latch line is a
+ * plain GPIO, toggled manually around each 16 bit frame. PC1 keeps its original
+ * role as the data line, so wiring-wise only the clock (PC2 -> PC3) and load
+ * (PC3 -> PC2) lines swap relative to the former bit-banged pinout, and the
+ * display stays on the MVIO-capable PORTC.
+ *
+ * SPI0 SS (ALT6: PF7) is unused: SPI_SSD_bm frees it so master mode is never
+ * disturbed and the pin stays available for UPDI.
+ */
 #define LOAD_PORT &PORTC
-#define LOAD_PIN PIN3_bp
+#define LOAD_PIN PIN2_bp
+
+#define SPI_MOSI_bm PIN1_bm
+#define SPI_SCK_bm PIN3_bm
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
@@ -144,11 +153,19 @@ void hal_init()
     ADC0.EVCTRL = ADC_STARTEI_bm;
 
     /**
-     * @brief Initialize pins used by MAX7219 display driver.
+     * @brief Route SPI0 to the MAX7219 pins and configure it as a host. The
+     *        MAX7219 clocks data in MSB-first on the rising edge with the clock
+     *        idle low (SPI mode 0). CLK_PER/4 = 6 MHz stays below the part's
+     *        10 MHz limit. SPI_SSD_bm disables the hardware slave-select so the
+     *        unused SS pin (PF7) cannot knock SPI0 out of host mode; the load
+     *        line is driven by hand instead (see max7219_write()).
      */
-    init_pin(DIN_PORT, DIN_PIN, OUTPUT);
-    init_pin(CLK_PORT, CLK_PIN, OUTPUT);
+    PORTMUX.SPIROUTEA = (PORTMUX.SPIROUTEA & ~PORTMUX_SPI0_gm) | PORTMUX_SPI0_ALT6_gc;
+    PORTC.DIRSET = SPI_MOSI_bm | SPI_SCK_bm;
     init_pin(LOAD_PORT, LOAD_PIN, OUTPUT);
+
+    SPI0.CTRLB = SPI_SSD_bm | SPI_MODE_0_gc;
+    SPI0.CTRLA = SPI_ENABLE_bm | SPI_MASTER_bm | SPI_PRESC_DIV4_gc;
 
     sei();
 }
@@ -187,19 +204,33 @@ void hal_stop_sample_counter()
     ADC0.INTFLAGS = ADC_RESRDY_bm;
 }
 
-void hal_set_din(uint8_t value)
+void hal_spi_write(uint8_t value)
 {
-    set_pin(DIN_PORT, DIN_PIN, value);
-}
+    SPI0.DATA = value;
 
-void hal_set_clk(uint8_t value)
-{
-    set_pin(CLK_PORT, CLK_PIN, value);
+    /* Wait for the transfer to finish; reading DATA clears the interrupt flag. */
+    while (!(SPI0.INTFLAGS & SPI_IF_bm));
+
+    (void)SPI0.DATA;
 }
 
 void hal_set_load(uint8_t value)
 {
     set_pin(LOAD_PORT, LOAD_PIN, value);
+}
+
+void hal_sleep_idle(void)
+{
+    /*
+     * Idle sleep stops the CPU clock but leaves the peripheral clock running,
+     * so TCA0 keeps pacing conversions, the ADC keeps sampling and the
+     * result-ready ISR still fires to wake the core. Used to spend the ~250 ms
+     * acquisition window asleep instead of spinning.
+     */
+    set_sleep_mode(SLEEP_MODE_IDLE);
+    sleep_enable();
+    sleep_cpu();
+    sleep_disable();
 }
 
 void hal_delay_ms(uint16_t ms)

@@ -58,12 +58,15 @@ tight loop forever; `control()` (`control.c`) advances a single state variable t
 INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)   [ERROR is a trap state]
 ```
 
-The signal-processing pipeline operates **in place on one shared buffer**,
-`acquisition_buffer` (`int16_t[FFT_SIZE]`, declared in `acquisition.h`). This single
-buffer is reused across every stage to fit AVR RAM limits — keep that in mind before
-adding intermediate copies:
+Acquisition and analysis are **double-buffered and pipelined**: there are two
+`int16_t[FFT_SIZE]` buffers (`acquisition_buffer_a`/`_b`, declared in `acquisition.h`).
+While one buffer is analysed, the ADC fills the other in the background, so sampling
+overlaps analysis/display instead of stalling it. Within a single frame the
+signal-processing stages still operate **in place on that one buffer** (the pitch
+estimators overwrite it), so keep that in mind before adding intermediate copies:
 
-1. **acquisition** — `acquisition_fill_buffer()` fills the buffer from the ADC.
+1. **acquisition** — `acquisition_start()` kicks off a background fill from the ADC and
+   `acquisition_wait()` blocks (sleeping the CPU between samples) until it completes.
 2. **window** — `window_apply_window()` applies the window selected in `config.h`.
 3. **fft** — `fft_real()` does an in-place real FFT (fixed-point; see `fix_mpy` in
    `fft.c`).
@@ -75,10 +78,11 @@ adding intermediate copies:
 ### Layers
 
 - **HAL (`hal.c/.h`)** — the only hardware-touching module. Wraps ADC sampling, a
-  timer-driven "sample counter" with a callback, bit-banged MAX7219 pins
-  (DIN/CLK/LOAD), and busy-wait delays. Port any retargeting through here.
+  timer-driven "sample counter" with a callback, the hardware SPI0 link to the MAX7219
+  (`hal_spi_write()` plus the manually toggled LOAD line), an idle-sleep primitive
+  (`hal_sleep_idle()`), and busy-wait delays. Port any retargeting through here.
 - **Driver (`max7219.c/.h`)** — register-level MAX7219 driver (register addresses are
-  `#define`s); built on top of the HAL pin setters.
+  `#define`s); clocks each 16-bit frame out through the HAL's hardware SPI.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
 - **DSP (`fft.c`, `fft8.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft8` is an

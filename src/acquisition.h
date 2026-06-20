@@ -52,12 +52,29 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                            GLOBAL VARIABLES                               */
 /*---------------------------------------------------------------------------*/
-extern int16_t acquisition_buffer[FFT_SIZE];
+/*
+ * Two acquisition buffers so sampling can run ahead of analysis: while one
+ * buffer is being analysed (and overwritten in place by the pitch estimator)
+ * the ADC fills the other in the background. The SRAM for the second buffer is
+ * the cost of pipelining acquisition and analysis.
+ */
+extern int16_t acquisition_buffer_a[FFT_SIZE];
+extern int16_t acquisition_buffer_b[FFT_SIZE];
 
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-void acquisition_fill_buffer();
+/**
+ * @brief Begin filling the given buffer from the ADC in the background. Returns
+ *        immediately; the buffer must not be touched until acquisition_wait().
+ */
+void acquisition_start(int16_t *buffer);
+
+/**
+ * @brief Block (sleeping between samples) until the in-flight acquisition
+ *        started by acquisition_start() has filled its buffer.
+ */
+void acquisition_wait(void);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
