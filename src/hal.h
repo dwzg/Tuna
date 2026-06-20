@@ -47,7 +47,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
-typedef void (*HAL_SAMPLE_COUNTER_CALLBACK)();
+typedef void (*HAL_SAMPLE_COUNTER_CALLBACK)(int16_t sample);
 
 /*---------------------------------------------------------------------------*/
 /*                            GLOBAL VARIABLES                               */

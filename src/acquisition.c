@@ -50,7 +50,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
-void acquisition_callback();
+void acquisition_callback(int16_t sample);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
@@ -71,10 +71,10 @@ void acquisition_fill_buffer()
     hal_stop_sample_counter();
 }
 
-void acquisition_callback()
+void acquisition_callback(int16_t sample)
 {
     if (acquisition_buffer_index < FFT_SIZE) {
-        acquisition_buffer[acquisition_buffer_index] = hal_get_adc_sample();
+        acquisition_buffer[acquisition_buffer_index] = sample;
     }
 
     ++acquisition_buffer_index;

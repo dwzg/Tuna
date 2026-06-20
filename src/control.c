@@ -60,13 +60,14 @@ typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
 static void display_note(double frequency);
+static uint8_t signal_is_present(void);
+static double smooth_frequency(double raw);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
 CONTROL_STATE current_state = INIT;
 double peak_freq;
-uint16_t i;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -88,11 +89,22 @@ void control()
         current_state = ANALYSIS;
         break;
     case ANALYSIS:
+        /*
+         * Gate on input level first: a quiet room otherwise drives the pitch
+         * estimator from noise and flickers random notes. The level has to be
+         * measured before analysis because both pitch methods overwrite the
+         * acquisition buffer in place.
+         */
+        if (!signal_is_present()) {
+            peak_freq = 0.0;
+        } else {
 #if defined(PITCH_METHOD_YIN)
-        peak_freq = yin_frequency(acquisition_buffer);
+            peak_freq = yin_frequency(acquisition_buffer);
 #elif defined(PITCH_METHOD_FFT)
-        peak_freq = analysis_fft_frequency(acquisition_buffer);
+            peak_freq = analysis_fft_frequency(acquisition_buffer);
 #endif
+        }
+        peak_freq = smooth_frequency(peak_freq);
         current_state = DISPLAY;
         break;
     case DISPLAY:
@@ -178,6 +190,94 @@ static void display_note(double frequency)
 
     bargraph_set_binary(0);
     bargraph_set_element((uint8_t)position, BARGRAPH_ON);
+}
+
+/**
+ * @brief Report whether the just-acquired frame carries a usable signal, i.e.
+ *        whether any sample reaches SILENCE_THRESHOLD in magnitude. Returns on
+ *        the first loud sample, so a present signal costs almost nothing.
+ */
+static uint8_t signal_is_present(void)
+{
+    uint16_t k;
+
+    for (k = 0; k < FFT_SIZE; ++k) {
+        int16_t s = acquisition_buffer[k];
+        if (s < 0) {
+            s = (int16_t)-s;
+        }
+        if (s >= SILENCE_THRESHOLD) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Stabilise the per-frame frequency estimate before it is displayed.
+ *        A non-positive input (silence) blanks the reading and resets the
+ *        filter. Otherwise the estimate is smoothed with an exponential moving
+ *        average while a note is held, transient half/double-pitch errors are
+ *        rejected (but accepted once an octave change persists), and a genuine
+ *        change of more than ~half a semitone snaps through immediately.
+ */
+static double smooth_frequency(double raw)
+{
+    static double smoothed = 0.0;
+    static uint8_t have = 0;
+    static uint8_t octave_votes = 0;
+
+    double corrected;
+    double ratio;
+
+    if (raw <= 0.0) {
+        have = 0;
+        smoothed = 0.0;
+        octave_votes = 0;
+        return 0.0;
+    }
+
+    if (!have) {
+        smoothed = raw;
+        have = 1;
+        octave_votes = 0;
+        return smoothed;
+    }
+
+    ratio = raw / smoothed;
+
+    if (ratio > 1.8 && ratio < 2.2) {
+        corrected = raw * 0.5;
+    } else if (ratio > 0.45 && ratio < 0.55) {
+        corrected = raw * 2.0;
+    } else {
+        corrected = 0.0; /* not an octave artifact */
+    }
+
+    if (corrected != 0.0) {
+        /* Hold the previous estimate unless the new octave keeps recurring. */
+        if (++octave_votes < OCTAVE_GIVE_IN) {
+            return smoothed;
+        }
+        smoothed = raw;
+        octave_votes = 0;
+        return smoothed;
+    }
+
+    octave_votes = 0;
+    corrected = raw;
+    ratio = corrected / smoothed;
+
+    if (ratio < 0.97 || ratio > 1.03) {
+        /* More than ~half a semitone away: a real note change, snap to it. */
+        smoothed = corrected;
+        return smoothed;
+    }
+
+    /* Same note held: smooth to steady the cents readout. */
+    smoothed = SMOOTHING_ALPHA * corrected + (1.0 - SMOOTHING_ALPHA) * smoothed;
+    return smoothed;
 }
 
 /*---------------------------------------------------------------------------*/

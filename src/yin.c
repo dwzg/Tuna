@@ -54,11 +54,13 @@ For more information, please refer to <http://unlicense.org/>
 
 /**
  * @brief Maximum lag. Sets the lowest detectable frequency = SAMPLE_FREQ / YIN_TAU_MAX.
- *        With FFT_SIZE=1024 and SAMPLE_FREQ=4096 this is 8 Hz, well below the
- *        lowest bass/guitar string. The window needs YIN_W + YIN_TAU_MAX <= FFT_SIZE
- *        samples, so both are FFT_SIZE/2.
+ *        With SAMPLE_FREQ=4096 this is 16 Hz, still well below the lowest bass
+ *        string (a 5-string low B is ~31 Hz), so the extra range up to 8 Hz that
+ *        a larger lag would buy is unused. The difference-function cost is
+ *        O(YIN_W * YIN_TAU_MAX), so halving the lag halves the dominant loop.
+ *        The window only needs YIN_W + YIN_TAU_MAX <= FFT_SIZE samples.
  */
-#define YIN_TAU_MAX (FFT_SIZE / 2)
+#define YIN_TAU_MAX 256
 
 /**
  * @brief Smallest lag considered, i.e. the highest detectable frequency
@@ -79,7 +81,7 @@ double yin_frequency(int16_t samples[])
 {
     uint16_t tau, j;
     uint16_t tau_est = 0;
-    double running_sum = 0.0;
+    uint64_t running_sum = 0;
     double better_tau;
 
     cmnd[0] = 1.0f;
@@ -87,7 +89,10 @@ double yin_frequency(int16_t samples[])
     /*
      * Difference function d(tau) plus cumulative mean normalization in one
      * pass. d(tau) is accumulated in 64-bit to avoid overflow: up to YIN_W
-     * terms each as large as (2*2048)^2.
+     * terms each as large as (2*2048)^2. running_sum stays an exact integer
+     * accumulator (the running total reaches ~10^12, far beyond the 2^24 exact
+     * range of avr-gcc's 32-bit double), and the single floating-point divide is
+     * deferred to the normalization step.
      */
     for (tau = 1; tau < YIN_TAU_MAX; ++tau) {
         uint64_t acc = 0;
@@ -95,9 +100,9 @@ double yin_frequency(int16_t samples[])
             int32_t diff = (int32_t)samples[j] - (int32_t)samples[j + tau];
             acc += (uint64_t)(diff * diff);
         }
-        running_sum += (double)acc;
-        cmnd[tau] = (running_sum > 0.0)
-                  ? (float)((double)acc * (double)tau / running_sum)
+        running_sum += acc;
+        cmnd[tau] = (running_sum > 0)
+                  ? (float)((double)acc * (double)tau / (double)running_sum)
                   : 1.0f;
     }
 
