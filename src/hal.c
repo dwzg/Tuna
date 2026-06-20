@@ -126,10 +126,22 @@ void hal_init()
     ADC0.MUXPOS = ADC_MUXPOS_AIN4_gc;
 
     /**
-     * @brief Initialize counter for sample frequency
+     * @brief Initialize counter for sample frequency. The overflow is routed
+     *        through the event system (below) rather than raising an interrupt,
+     *        so no TCA overflow ISR is enabled here.
      */
     TCA0.SINGLE.PER = COUNTER_TOP_VALUE;
-    TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
+
+    /**
+     * @brief Route the TCA0 overflow to the ADC start trigger via an event
+     *        channel. Each conversion is then started directly in hardware at
+     *        the timer overflow, eliminating the ISR-latency jitter of starting
+     *        the conversion from software. The completed result is collected in
+     *        the ADC result-ready ISR (enabled while sampling is active).
+     */
+    EVSYS.CHANNEL0 = EVSYS_CHANNEL0_TCA0_OVF_LUNF_gc;
+    EVSYS.USERADC0START = EVSYS_USER_CHANNEL0_gc;
+    ADC0.EVCTRL = ADC_STARTEI_bm;
 
     /**
      * @brief Initialize pins used by MAX7219 display driver.
@@ -159,6 +171,10 @@ void hal_start_sample_counter(HAL_SAMPLE_COUNTER_CALLBACK callback)
 {
     sample_counter_callback = callback;
 
+    /* Arm the result-ready interrupt, then let the timer drive conversions. */
+    ADC0.INTFLAGS = ADC_RESRDY_bm;
+    ADC0.INTCTRL = ADC_RESRDY_bm;
+
     TCA0.SINGLE.CTRLA |= TCA_SINGLE_ENABLE_bm;
 }
 
@@ -166,6 +182,9 @@ void hal_stop_sample_counter()
 {
     TCA0.SINGLE.CTRLA &= ~(TCA_SINGLE_ENABLE_bm);
     TCA0.SINGLE.CNT = 0;
+
+    ADC0.INTCTRL = 0;
+    ADC0.INTFLAGS = ADC_RESRDY_bm;
 }
 
 void hal_set_din(uint8_t value)
@@ -211,10 +230,13 @@ void set_pin(PORT_t *port, uint8_t pin, uint8_t value)
     }
 }
 
-ISR(TCA0_OVF_vect)
+ISR(ADC0_RESRDY_vect)
 {
-    TCA0.SINGLE.INTFLAGS |= TCA_SINGLE_OVF_bm;
-    sample_counter_callback();
+    /* Reading the result register clears the result-ready flag. The conversion
+     * was started in hardware by the timer overflow event. */
+    int16_t sample = ((int16_t)ADC0.RES) - (1 << 11);
+
+    sample_counter_callback(sample);
 }
 
 /*---------------------------------------------------------------------------*/

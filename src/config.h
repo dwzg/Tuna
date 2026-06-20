@@ -90,6 +90,27 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define YIN_THRESHOLD 0.15f
 
+/**
+ * @brief Peak input amplitude (in ADC counts, full scale +-2048 for the 12 bit
+ *        single-ended result) below which a frame is treated as silence and the
+ *        display is blanked instead of reporting a noise-driven note.
+ */
+#define SILENCE_THRESHOLD 40
+
+/**
+ * @brief Exponential-moving-average weight applied to the newest frequency
+ *        estimate while refining the reading of a held note (0..1). Lower values
+ *        steady the cents needle at the cost of a slower response.
+ */
+#define SMOOTHING_ALPHA 0.5
+
+/**
+ * @brief Number of consecutive frames an octave jump must persist before it is
+ *        accepted as a real octave change rather than a transient YIN
+ *        half/double-pitch error.
+ */
+#define OCTAVE_GIVE_IN 3
+
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/

@@ -42,6 +42,7 @@ For more information, please refer to <http://unlicense.org/>
 
 #ifdef PITCH_METHOD_FFT
 
+#include <math.h>
 #include "window.h"
 #include "fft.h"
 
@@ -72,8 +73,22 @@ double analysis_fft_frequency(int16_t samples[])
     uint16_t i;
     uint16_t max_index;
     int16_t max;
+    int32_t mean = 0;
     double freq_bin = (double)SAMPLE_FREQ / (double)FFT_SIZE;
     double delta = 0.0;
+
+    /*
+     * Remove the DC component before windowing. The AC-coupled input is biased
+     * at VDD/2 and re-centred by a fixed offset, so a small residual bias can
+     * remain and would otherwise leak through the window into the low bins.
+     */
+    for (i = 0; i < FFT_SIZE; ++i) {
+        mean += samples[i];
+    }
+    mean /= FFT_SIZE;
+    for (i = 0; i < FFT_SIZE; ++i) {
+        samples[i] = (int16_t)((int32_t)samples[i] - mean);
+    }
 
     /* Reduce spectral leakage before transforming. */
     window_apply_window(samples);
@@ -109,11 +124,16 @@ double analysis_fft_frequency(int16_t samples[])
         }
     }
 
-    /* Parabolic interpolation in bin space for sub-bin frequency resolution. */
+    /*
+     * Parabolic interpolation in bin space for sub-bin frequency resolution.
+     * The parabola is fitted to the log magnitudes, which is the more accurate
+     * peak estimator for the (near-Gaussian) main lobe of a window; the +1
+     * keeps log() finite for an empty bin.
+     */
     if (max_index > 0 && max_index < SPECTRUM_BINS) {
-        double y0 = (double)samples[max_index - 1];
-        double y1 = (double)samples[max_index];
-        double y2 = (double)samples[max_index + 1];
+        double y0 = log((double)samples[max_index - 1] + 1.0);
+        double y1 = log((double)samples[max_index] + 1.0);
+        double y2 = log((double)samples[max_index + 1] + 1.0);
         double denom = y0 - 2.0 * y1 + y2;
         if (denom != 0.0) {
             delta = 0.5 * (y0 - y2) / denom;

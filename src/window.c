@@ -436,7 +436,7 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
      8005,  8071,  8137,  8204,  8271,  8338,  8406,  8474,
      8542,  8610,  8679,  8749,  8818,  8888,  8959,  9029,
      9100,  9172,  9244,  9316,  9388,  9461,  9534,  9607,
-     9681,  9755,  9829,  9904,  9979  10054, 10130, 10206,
+     9681,  9755,  9829,  9904,  9979, 10054, 10130, 10206,
     10283, 10359, 10436, 10514, 10591, 10669, 10747, 10826,
     10905, 10984, 11064, 11143, 11224, 11304, 11385, 11466,
     11547, 11629, 11711, 11793, 11876, 11959, 12042, 12125,
@@ -487,9 +487,15 @@ void window_apply_window(int16_t time_data[])
 {
     uint16_t i;
 
+    /*
+     * Scale by WINDOW[i] / 32768 via an arithmetic shift instead of dividing by
+     * INT16_MAX. AVR has no hardware divide, so >> 15 replaces a costly 32 bit
+     * division on every one of the FFT_SIZE samples; the 1/32768 vs 1/32767
+     * difference is a 0.003 % amplitude scale and irrelevant to peak picking.
+     */
     for (i = 0; i < FFT_SIZE / 2; ++i) {
-        time_data[i] = (int16_t)(((int32_t)time_data[i] * (int32_t)WINDOW[i]) / INT16_MAX);
-        time_data[FFT_SIZE - i - 1] = (int16_t)(((int32_t)time_data[FFT_SIZE - i - 1] * (int32_t)WINDOW[i]) / INT16_MAX);
+        time_data[i] = (int16_t)(((int32_t)time_data[i] * (int32_t)WINDOW[i]) >> 15);
+        time_data[FFT_SIZE - i - 1] = (int16_t)(((int32_t)time_data[FFT_SIZE - i - 1] * (int32_t)WINDOW[i]) >> 15);
     }
 }
 
