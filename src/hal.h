@@ -63,6 +63,18 @@ void hal_set_din(uint8_t value);
 void hal_set_clk(uint8_t value);
 void hal_set_load(uint8_t value);
 void hal_sleep_idle(void);
+
+/**
+ * @brief Globally disable / re-enable interrupts to bracket a short critical
+ *        section. Used to read multi-byte state shared with an ISR atomically on
+ *        this 8-bit core. They assume interrupts are enabled in normal operation
+ *        (hal_init() leaves them so): hal_enable_interrupts() unconditionally
+ *        re-enables, it does not save and restore the prior state, so do not nest
+ *        these or call them from within an ISR.
+ */
+void hal_disable_interrupts(void);
+void hal_enable_interrupts(void);
+
 void hal_delay_ms(uint16_t ms);
 void hal_delay_us(uint16_t us);
 
