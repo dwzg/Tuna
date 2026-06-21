@@ -78,24 +78,6 @@ static void bargraph_send_data(void)
 }
 
 /**
- * @brief Sets a given element of the bar graph to the given value.
- * @param[in] element Bar graph element to set, going left to right.
- * @param[in] value Value to set element to.
- */
-void bargraph_set_element(uint8_t element, uint8_t value)
-{
-    if (element < BARGRAPH_SIZE) {
-        if (value == BARGRAPH_OFF) {
-            bargraph_state &= ~(1UL << element);
-        } else {
-            bargraph_state |= (1UL << element);
-        }
-    }
-
-    bargraph_send_data();
-}
-
-/**
  * @brief Sets the bar graph to a given level bar starting from origin.
  * @param[in] level Level bar to display.
  * @param[in] origin Origin of the level bar.
@@ -116,9 +98,9 @@ void bargraph_set_level(uint8_t level, uint8_t origin)
     bargraph_send_data();
 }
 
-void bargraph_set_binary(int16_t value)
+void bargraph_set_binary(uint32_t value)
 {
-    bargraph_state = (uint32_t)value;
+    bargraph_state = value;
 
     bargraph_send_data();
 }

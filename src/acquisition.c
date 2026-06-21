@@ -51,12 +51,23 @@ For more information, please refer to <http://unlicense.org/>
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
 static void acquisition_callback(int16_t sample);
+static void acquisition_start(int16_t *buffer);
+static void acquisition_wait(void);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-int16_t acquisition_buffer_a[FFT_SIZE];
-int16_t acquisition_buffer_b[FFT_SIZE];
+/*
+ * Two acquisition buffers so sampling can run ahead of analysis: while one
+ * buffer is being analysed (and overwritten in place by the pitch estimator)
+ * the ADC fills the other in the background. The SRAM for the second buffer is
+ * the cost of pipelining acquisition and analysis.
+ */
+static int16_t acquisition_buffer_a[FFT_SIZE];
+static int16_t acquisition_buffer_b[FFT_SIZE];
+
+/* The buffer the ADC is currently being directed to fill. */
+static int16_t *filling_buffer;
 
 /* Buffer the result-ready ISR is currently writing into, and its progress. */
 static int16_t *volatile fill_buffer;
@@ -66,7 +77,32 @@ static volatile uint8_t fill_complete;
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
 /*---------------------------------------------------------------------------*/
-void acquisition_start(int16_t *buffer)
+void acquisition_prime(void)
+{
+    filling_buffer = acquisition_buffer_a;
+    acquisition_start(filling_buffer);
+}
+
+int16_t *acquisition_collect(void)
+{
+    int16_t *analysis_buffer;
+
+    /*
+     * Collect the buffer the ADC has been filling, then immediately launch the
+     * next acquisition into the other buffer so sampling overlaps the analysis
+     * and display of this one.
+     */
+    acquisition_wait();
+    analysis_buffer = filling_buffer;
+    filling_buffer = (filling_buffer == acquisition_buffer_a)
+                   ? acquisition_buffer_b
+                   : acquisition_buffer_a;
+    acquisition_start(filling_buffer);
+
+    return analysis_buffer;
+}
+
+static void acquisition_start(int16_t *buffer)
 {
     fill_buffer = buffer;
     fill_index = 0;
@@ -75,7 +111,7 @@ void acquisition_start(int16_t *buffer)
     hal_start_sample_counter(acquisition_callback);
 }
 
-void acquisition_wait(void)
+static void acquisition_wait(void)
 {
     /*
      * The timer keeps pacing conversions until it is stopped below, so a wake

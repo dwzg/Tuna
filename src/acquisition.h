@@ -52,29 +52,27 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                            GLOBAL VARIABLES                               */
 /*---------------------------------------------------------------------------*/
-/*
- * Two acquisition buffers so sampling can run ahead of analysis: while one
- * buffer is being analysed (and overwritten in place by the pitch estimator)
- * the ADC fills the other in the background. The SRAM for the second buffer is
- * the cost of pipelining acquisition and analysis.
- */
-extern int16_t acquisition_buffer_a[FFT_SIZE];
-extern int16_t acquisition_buffer_b[FFT_SIZE];
 
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Begin filling the given buffer from the ADC in the background. Returns
- *        immediately; the buffer must not be touched until acquisition_wait().
+ * @brief Start the acquisition pipeline by launching the first background fill.
+ *        Call once before the first acquisition_collect().
  */
-void acquisition_start(int16_t *buffer);
+void acquisition_prime(void);
 
 /**
- * @brief Block (sleeping between samples) until the in-flight acquisition
- *        started by acquisition_start() has filled its buffer.
+ * @brief Collect the frame the ADC has been filling and hand it back for
+ *        analysis, immediately launching the next fill into the other of the
+ *        two internal buffers so sampling overlaps analysis/display
+ *        (double-buffered pipeline). Blocks (sleeping the CPU between samples)
+ *        until the in-flight fill completes.
+ * @return Pointer to the just-filled FFT_SIZE buffer. It is owned by the caller
+ *         only until the next acquisition_collect(), and may be overwritten in
+ *         place during analysis.
  */
-void acquisition_wait(void);
+int16_t *acquisition_collect(void);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

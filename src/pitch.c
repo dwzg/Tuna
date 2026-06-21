@@ -80,7 +80,14 @@ NOTE pitch_from_frequency(double frequency)
     midi = (double)A4_MIDI + 12.0 * (log(frequency / A4_FREQ) / LN2);
     nearest = (int16_t)(midi + 0.5);
 
-    /* Octave numbering follows scientific pitch notation (octave 1 starts at C1). */
+    /*
+     * Octave numbering follows scientific pitch notation (octave 1 starts at
+     * C1). The table spans octaves 0..NUM_OCTAVES-1, but the pitch estimators
+     * can only resolve up to the Nyquist frequency (SAMPLE_FREQ / 2), so the
+     * top of this range is unreachable at the configured sample rate (e.g. with
+     * SAMPLE_FREQ=4096 nothing above ~C7 is detectable). The bound is kept for
+     * defensiveness rather than because those octaves can occur.
+     */
     octave = (int8_t)(nearest / NUM_PITCH_CLASSES - 1);
     if (octave < 0 || octave >= NUM_OCTAVES) {
         return note;
