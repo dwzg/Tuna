@@ -54,9 +54,9 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-#ifdef DIRICHLET
+#ifdef WINDOW_DIRICHLET
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
@@ -125,9 +125,9 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
 
 #endif
 
-#ifdef HANNING
+#ifdef WINDOW_HANNING
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     1,     3,     5,     8,    11,    15,
        20,    25,    31,    37,    44,    52,    61,    69,
        79,    89,   100,   111,   123,   136,   149,   163,
@@ -196,9 +196,9 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
 
 #endif
 
-#ifdef HAMMING
+#ifdef WINDOW_HAMMING
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
      2621,  2622,  2622,  2624,  2626,  2628,  2632,  2635,
      2640,  2644,  2650,  2656,  2662,  2669,  2677,  2685,
      2694,  2703,  2713,  2724,  2735,  2747,  2759,  2772,
@@ -267,9 +267,9 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
 
 #endif
 
-#ifdef BLACKMAN
+#ifdef WINDOW_BLACKMAN
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     0,     1,     2,     3,     4,     5,
         7,     9,    11,    13,    16,    19,    22,    25,
        29,    32,    36,    40,    45,    49,    54,    59,
@@ -338,9 +338,9 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
 
 #endif
 
-#ifdef BARTLETT
+#ifdef WINDOW_BARTLETT
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,    64,   128,   192,   256,   320,   384,   448,
       512,   577,   641,   705,   769,   833,   897,   961,
      1025,  1089,  1153,  1217,  1281,  1345,  1409,  1473,
@@ -409,9 +409,9 @@ const int16_t WINDOW[FFT_SIZE / 2] = {
 
 #endif
 
-#ifdef GAUSS
+#ifdef WINDOW_GAUSS
 
-const int16_t WINDOW[FFT_SIZE / 2] = {
+const int16_t WINDOW[FRAME_SIZE / 2] = {
      1440,  1457,  1475,  1493,  1512,  1530,  1549,  1567,
      1586,  1605,  1625,  1644,  1664,  1684,  1704,  1725,
      1745,  1766,  1787,  1808,  1829,  1851,  1873,  1895,
@@ -490,12 +490,12 @@ void window_apply_window(int16_t time_data[])
     /*
      * Scale by WINDOW[i] / 32768 via an arithmetic shift instead of dividing by
      * INT16_MAX. AVR has no hardware divide, so >> 15 replaces a costly 32 bit
-     * division on every one of the FFT_SIZE samples; the 1/32768 vs 1/32767
+     * division on every one of the FRAME_SIZE samples; the 1/32768 vs 1/32767
      * difference is a 0.003 % amplitude scale and irrelevant to peak picking.
      */
-    for (i = 0; i < FFT_SIZE / 2; ++i) {
+    for (i = 0; i < FRAME_SIZE / 2; ++i) {
         time_data[i] = (int16_t)(((int32_t)time_data[i] * (int32_t)WINDOW[i]) >> 15);
-        time_data[FFT_SIZE - i - 1] = (int16_t)(((int32_t)time_data[FFT_SIZE - i - 1] * (int32_t)WINDOW[i]) >> 15);
+        time_data[FRAME_SIZE - i - 1] = (int16_t)(((int32_t)time_data[FRAME_SIZE - i - 1] * (int32_t)WINDOW[i]) >> 15);
     }
 }
 

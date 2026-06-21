@@ -29,16 +29,16 @@ static int failures = 0;
  * plain Hamming keeps the test self-contained and deterministic. */
 void window_apply_window(int16_t a[])
 {
-    for (int n = 0; n < FFT_SIZE; ++n) {
-        double w = 0.54 - 0.46 * cos(2.0 * M_PI * n / (FFT_SIZE - 1));
+    for (int n = 0; n < FRAME_SIZE; ++n) {
+        double w = 0.54 - 0.46 * cos(2.0 * M_PI * n / (FRAME_SIZE - 1));
         a[n] = (int16_t)lround(a[n] * w);
     }
 }
 
 static double detect(double f0, const double *weights, int nh, double amp)
 {
-    int16_t x[FFT_SIZE];
-    for (int n = 0; n < FFT_SIZE; ++n) {
+    int16_t x[FRAME_SIZE];
+    for (int n = 0; n < FRAME_SIZE; ++n) {
         double s = 0.0;
         for (int h = 1; h <= nh && f0 * h < SAMPLE_FREQ / 2.0; ++h)
             s += weights[h - 1] * amp * sin(2.0 * M_PI * f0 * h * n / SAMPLE_FREQ);

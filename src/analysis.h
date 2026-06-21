@@ -59,7 +59,7 @@ For more information, please refer to <http://unlicense.org/>
 /**
  * @brief  Estimate the fundamental frequency of a block of audio samples via
  *         an FFT and parabolic peak interpolation.
- * @param[in,out] samples Buffer of FFT_SIZE time-domain samples. The contents
+ * @param[in,out] samples Buffer of FRAME_SIZE time-domain samples. The contents
  *                are overwritten (windowed, transformed, then magnitudes).
  * @return Frequency of the strongest spectral peak in Hz.
  */

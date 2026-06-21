@@ -182,7 +182,7 @@ static void greet_message(void)
  */
 static void display_note(double frequency)
 {
-#ifdef SHARP
+#ifdef ACCIDENTAL_SHARP
     static const char NOTE_LETTER[12] = { 'C','C','D','D','E','F','F','G','G','A','A','H' };
 #else
     static const char NOTE_LETTER[12] = { 'C','D','D','E','E','F','G','G','A','A','H','H' };
@@ -230,12 +230,12 @@ static uint8_t signal_is_present(const int16_t *buffer)
     int16_t dc;
     uint16_t k;
 
-    for (k = 0; k < FFT_SIZE; ++k) {
+    for (k = 0; k < FRAME_SIZE; ++k) {
         mean += buffer[k];
     }
-    dc = (int16_t)(mean / FFT_SIZE);
+    dc = (int16_t)(mean / FRAME_SIZE);
 
-    for (k = 0; k < FFT_SIZE; ++k) {
+    for (k = 0; k < FRAME_SIZE; ++k) {
         int16_t s = (int16_t)(buffer[k] - dc);
         if (s < 0) {
             s = (int16_t)-s;

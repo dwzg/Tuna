@@ -46,7 +46,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /**
  * @brief  Estimate the fundamental frequency of a block of audio samples.
- * @param[in] samples Buffer of FFT_SIZE time-domain samples (not modified).
+ * @param[in] samples Buffer of FRAME_SIZE time-domain samples (not modified).
  * @return Estimated fundamental frequency in Hz, or 0.0 if none was found.
  */
 double yin_frequency(int16_t samples[]);

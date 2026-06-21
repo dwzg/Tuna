@@ -63,8 +63,8 @@ static void acquisition_wait(void);
  * the ADC fills the other in the background. The SRAM for the second buffer is
  * the cost of pipelining acquisition and analysis.
  */
-static int16_t acquisition_buffer_a[FFT_SIZE];
-static int16_t acquisition_buffer_b[FFT_SIZE];
+static int16_t acquisition_buffer_a[FRAME_SIZE];
+static int16_t acquisition_buffer_b[FRAME_SIZE];
 
 /* The buffer the ADC is currently being directed to fill. */
 static int16_t *filling_buffer;
@@ -135,7 +135,7 @@ static void acquisition_callback(int16_t sample)
     fill_buffer[fill_index] = sample;
     ++fill_index;
 
-    if (fill_index >= FFT_SIZE) {
+    if (fill_index >= FRAME_SIZE) {
         fill_complete = 1;
     }
 }
