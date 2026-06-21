@@ -107,9 +107,23 @@ For more information, please refer to <http://unlicense.org/>
 #define LOG2_FRAME_SIZE __builtin_ctz(FRAME_SIZE)
 
 /**
- * @brief Window function to use.
+ * @brief Window function applied before the FFT. Set WINDOW_FUNCTION to exactly
+ *        one of the WINDOW_* identifiers below; window.c selects the matching
+ *        coefficient table and errors out if it is unset or unknown. (The
+ *        window is an FFT-path concept - the YIN method does not window its
+ *        input.) The build system can override the default by predefining
+ *        WINDOW_FUNCTION, e.g. -DWINDOW_FUNCTION=WINDOW_BLACKMAN.
  */
-#define WINDOW_HAMMING
+#define WINDOW_DIRICHLET 1   /* rectangular - no taper */
+#define WINDOW_HANNING   2
+#define WINDOW_HAMMING   3
+#define WINDOW_BLACKMAN  4
+#define WINDOW_BARTLETT  5   /* triangular */
+#define WINDOW_GAUSS     6
+
+#ifndef WINDOW_FUNCTION
+#define WINDOW_FUNCTION WINDOW_HAMMING
+#endif
 
 /**
  * @brief FFT pitch method, octave correction. The strongest spectral bin is

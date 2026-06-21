@@ -136,9 +136,11 @@ before adding intermediate copies:
 frame / acquisition buffer length shared by both pitch methods; only the FFT path also
 treats it as a transform length) with `LOG2_FRAME_SIZE` derived from it via
 `__builtin_ctz` so the two cannot drift, plus `SAMPLE_FREQ`, the window function
-(`WINDOW_HAMMING`), and the accidental convention (`ACCIDENTAL_SHARP` vs flat). The window
-and note-naming choices switch behavior via `#ifdef` (e.g. the `PITCH_CLASS` enum in
-`pitch.h`).
+(`WINDOW_FUNCTION`, set to one of the `WINDOW_*` values), and the accidental convention
+(`ACCIDENTAL_SHARP` vs flat). `WINDOW_FUNCTION` is a single-valued selector — `window.c`
+picks the matching coefficient table with `#if/#elif` and `#error`s if it is unset or
+unknown — while the note-naming choice still switches via `#ifdef` (e.g. the `PITCH_CLASS`
+enum in `pitch.h`).
 
 ## Conventions
 

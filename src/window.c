@@ -54,7 +54,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-#ifdef WINDOW_DIRICHLET
+#if WINDOW_FUNCTION == WINDOW_DIRICHLET
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
@@ -123,9 +123,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767
 };
 
-#endif
-
-#ifdef WINDOW_HANNING
+#elif WINDOW_FUNCTION == WINDOW_HANNING
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     1,     3,     5,     8,    11,    15,
@@ -194,9 +192,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32750, 32754, 32758, 32761, 32763, 32765, 32766, 32767
 };
 
-#endif
-
-#ifdef WINDOW_HAMMING
+#elif WINDOW_FUNCTION == WINDOW_HAMMING
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
      2621,  2622,  2622,  2624,  2626,  2628,  2632,  2635,
@@ -265,9 +261,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32751, 32755, 32758, 32761, 32764, 32765, 32766, 32767
 };
 
-#endif
-
-#ifdef WINDOW_BLACKMAN
+#elif WINDOW_FUNCTION == WINDOW_BLACKMAN
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     0,     1,     2,     3,     4,     5,
@@ -336,9 +330,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32739, 32746, 32752, 32757, 32761, 32764, 32766, 32767
 };
 
-#endif
-
-#ifdef WINDOW_BARTLETT
+#elif WINDOW_FUNCTION == WINDOW_BARTLETT
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
         0,    64,   128,   192,   256,   320,   384,   448,
@@ -407,9 +399,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32287, 32351, 32415, 32479, 32543, 32607, 32671, 32735
 };
 
-#endif
-
-#ifdef WINDOW_GAUSS
+#elif WINDOW_FUNCTION == WINDOW_GAUSS
 
 const int16_t WINDOW[FRAME_SIZE / 2] = {
      1440,  1457,  1475,  1493,  1512,  1530,  1549,  1567,
@@ -478,6 +468,8 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
     32745, 32750, 32755, 32759, 32762, 32765, 32766, 32767
 };
 
+#else
+#error "config.h: WINDOW_FUNCTION must be set to one of the WINDOW_* values"
 #endif
 
 /*---------------------------------------------------------------------------*/
