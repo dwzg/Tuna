@@ -56,10 +56,9 @@ typedef void (*HAL_SAMPLE_COUNTER_CALLBACK)(int16_t sample);
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-void hal_init();
-int16_t hal_get_adc_sample();
+void hal_init(void);
 void hal_start_sample_counter(HAL_SAMPLE_COUNTER_CALLBACK callback);
-void hal_stop_sample_counter();
+void hal_stop_sample_counter(void);
 void hal_set_din(uint8_t value);
 void hal_set_clk(uint8_t value);
 void hal_set_load(uint8_t value);

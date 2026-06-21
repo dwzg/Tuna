@@ -45,10 +45,12 @@ gitignored.
 
 ## Testing / CI
 
-The DSP code (`fft.c`, `analysis.c`, `yin.c`) is plain integer/fixed-point C with no
-AVR dependencies, so it is exercised by **host regression tests** under `test/` that
-compile the real sources with the native compiler and check pitch detection on
-synthetic signals (CTest):
+The DSP and pure decision logic (`fft.c`, `analysis.c`, `yin.c`, `pitch.c`,
+`smoothing.c`) is plain integer/fixed-point/floating C with no AVR dependencies, so it is
+exercised by **host regression tests** under `test/` (`test_fft`, `test_yin`,
+`test_pitch`, `test_smoothing`) that compile the real sources with the native compiler
+and check pitch detection, note mapping and frequency smoothing on synthetic inputs
+(CTest):
 
 ```sh
 cmake -S test -B test/build
@@ -74,25 +76,32 @@ The program is a cooperative state machine, not an RTOS. `main()` calls `control
 tight loop forever; `control()` (`control.c`) advances a single state variable through:
 
 ```
-INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)   [ERROR is a trap state]
+INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)   [ERROR is a halt trap]
 ```
 
-Acquisition and analysis are **double-buffered and pipelined**: there are two
-`int16_t[FFT_SIZE]` buffers (`acquisition_buffer_a`/`_b`, declared in `acquisition.h`).
-While one buffer is analysed, the ADC fills the other in the background, so sampling
-overlaps analysis/display instead of stalling it. Within a single frame the
-signal-processing stages still operate **in place on that one buffer** (the pitch
-estimators overwrite it), so keep that in mind before adding intermediate copies:
+Acquisition and analysis are **double-buffered and pipelined**: `acquisition.c` owns two
+`int16_t[FFT_SIZE]` buffers internally and ping-pongs between them. While one buffer is
+analysed, the ADC fills the other in the background, so sampling overlaps analysis/display
+instead of stalling it. Within a single frame the signal-processing stages still operate
+**in place on that one buffer** (the pitch estimators overwrite it), so keep that in mind
+before adding intermediate copies:
 
-1. **acquisition** — `acquisition_start()` kicks off a background fill from the ADC and
-   `acquisition_wait()` blocks (sleeping the CPU between samples) until it completes.
-2. **window** — `window_apply_window()` applies the window selected in `config.h`.
-3. **fft** — `fft_real()` does an in-place real FFT (fixed-point; see `fix_mpy` in
-   `fft.c`).
-4. **analysis** — `analysis_absolute()` converts to magnitudes, then
-   `analysis_find_interpolated_peak_frequency()` returns the peak frequency (with
-   sub-bin interpolation).
-5. **display** — `segment_*` / `bargraph_*` push the result out through the MAX7219.
+1. **acquisition** — `acquisition_prime()` launches the first background fill at startup;
+   thereafter `acquisition_collect()` blocks (sleeping the CPU between samples) until the
+   in-flight fill completes, relaunches the next fill into the other buffer, and returns
+   the just-filled frame for analysis. The buffer swap lives inside `acquisition.c`.
+2. **analysis** — the frame is gated on input level (`signal_is_present()`), then the
+   pitch method selected in `config.h` estimates the fundamental frequency:
+   - **YIN** (default) — `yin_frequency()` (`yin.c`) does a time-domain autocorrelation
+     estimate; no windowing/FFT involved.
+   - **FFT** — `analysis_fft_frequency()` (`analysis.c`) removes DC, applies
+     `window_apply_window()`, runs `fft()` (`fft.c`) as an in-place real-input transform
+     (fixed-point; see `fix_mpy`), converts to magnitudes and returns the
+     parabolically-interpolated peak frequency with HPS-style octave correction.
+
+   `smooth_frequency()` (`smoothing.c`) then stabilises the per-frame estimate.
+3. **display** — `pitch_from_frequency()` maps the frequency to a note, then `segment_*`
+   / `bargraph_*` push the result out through the MAX7219.
 
 ### Layers
 
@@ -106,12 +115,18 @@ estimators overwrite it), so keep that in mind before adding intermediate copies
   `#define`s); clocks each 16-bit frame out through the HAL pin setters.
 - **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
   MAX7219 driver.
-- **DSP (`fft.c`, `window.c`, `analysis.c`, `pitch.c`)** — `fft.c` is a fixed-point
-  in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`). `analysis.c`
-  runs it as a **real-input FFT**: it packs the real signal into a half-size complex
-  FFT and splits the result, so the FFT path costs ~half the transform work and an
-  `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `pitch.c` maps
-  frequencies to musical pitch classes.
+- **DSP (`fft.c`, `window.c`, `analysis.c`, `yin.c`, `pitch.c`)** — `fft.c` is a
+  fixed-point in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`).
+  `analysis.c` runs it as a **real-input FFT**: it packs the real signal into a half-size
+  complex FFT and splits the result, so the FFT path costs ~half the transform work and
+  an `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `yin.c` is the
+  alternative time-domain (YIN autocorrelation) pitch estimator. `pitch.c` maps
+  frequencies to musical pitch classes; `smoothing.c` stabilises the per-frame estimate
+  (EMA plus octave-jump rejection).
+- **Control (`control.c`, `main.c`)** — the cooperative state machine described above,
+  plus the startup splash. The `ERROR`/`default` case is a defensive halt trap: it
+  latches an "Er" indication and idles the CPU, reachable only if the state variable is
+  corrupted.
 
 ### Compile-time configuration
 

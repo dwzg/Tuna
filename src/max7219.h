@@ -69,11 +69,11 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-void max7219_init();
+void max7219_init(void);
 
 void max7219_write(uint8_t address, uint8_t data);
 
-void max7219_reset();
+void max7219_reset(void);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */

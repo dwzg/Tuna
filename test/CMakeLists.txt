@@ -27,3 +27,15 @@ target_include_directories(test_fft PRIVATE "${SRC}")
 target_compile_definitions(test_fft PRIVATE PITCH_METHOD_FFT)
 target_link_libraries(test_fft m)
 add_test(NAME fft COMMAND test_fft)
+
+# Note mapper (pitch_from_frequency).
+add_executable(test_pitch test_pitch.c "${SRC}/pitch.c")
+target_include_directories(test_pitch PRIVATE "${SRC}")
+target_link_libraries(test_pitch m)
+add_test(NAME pitch COMMAND test_pitch)
+
+# Per-frame frequency stabiliser (smooth_frequency).
+add_executable(test_smoothing test_smoothing.c "${SRC}/smoothing.c")
+target_include_directories(test_smoothing PRIVATE "${SRC}")
+target_link_libraries(test_smoothing m)
+add_test(NAME smoothing COMMAND test_smoothing)

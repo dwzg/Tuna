@@ -51,11 +51,12 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
+static void bargraph_send_data(void);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-uint32_t bargraph_state = 0;
+static uint32_t bargraph_state = 0;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -63,7 +64,7 @@ uint32_t bargraph_state = 0;
 /**
  * @brief Send current bar graph state to the display driver.
  */
-void bargraph_send_data()
+static void bargraph_send_data(void)
 {
     uint8_t data_dig_2, data_dig_3, data_dig_4;
 
@@ -74,40 +75,6 @@ void bargraph_send_data()
     max7219_write(MAX7219_DIGIT_2_REGISTER, data_dig_2);
     max7219_write(MAX7219_DIGIT_3_REGISTER, data_dig_3);
     max7219_write(MAX7219_DIGIT_4_REGISTER, data_dig_4);
-}
-
-/**
- * @brief Sets a given element of the bar graph to the given value.
- * @param[in] element Bar graph element to set, going left to right.
- * @param[in] value Value to set element to.
- */
-void bargraph_set_element(uint8_t element, uint8_t value)
-{
-    if (element < BARGRAPH_SIZE) {
-        if (value == BARGRAPH_OFF) {
-            bargraph_state &= ~(1UL << element);
-        } else {
-            bargraph_state |= (1UL << element);
-        }
-    }
-
-    bargraph_send_data();
-}
-
-/**
- * @brief Gets the current value of a given element of the bar graph.
- * @param[in] element Bar graph element to set, going left to right.
- * @return Value of the element.
- */
-uint8_t bargraph_get_element(uint8_t element)
-{
-    uint8_t value = 0;
-
-    if (element < BARGRAPH_SIZE) {
-        value = (uint8_t)((bargraph_state & (1UL << element)) >> element);
-    }
-
-    return value;
 }
 
 /**
@@ -131,34 +98,9 @@ void bargraph_set_level(uint8_t level, uint8_t origin)
     bargraph_send_data();
 }
 
-/**
- * @brief Sets the bar graph to a given centered range.
- * @param[in] range Half width of the range.
- * @param[in] fill Flag to fill the inside of the range.
- */
-void bargraph_set_range(uint8_t range, uint8_t fill)
+void bargraph_set_binary(uint32_t value)
 {
-    uint32_t bit_mask;
-    uint8_t MAX_RANGE = BARGRAPH_SIZE / 2;
-
-    if (range <= MAX_RANGE) {
-        if (range == 0) {
-            bargraph_state = 0;
-        } else if (fill) {
-            bit_mask = (1UL << (range * 2)) - 1UL;
-            bargraph_state = bit_mask << (MAX_RANGE - range);
-        } else {
-            bargraph_state = (1UL << (MAX_RANGE - range));
-            bargraph_state |= (1UL << (MAX_RANGE - 1 + range));
-        }
-
-        bargraph_send_data();
-    }
-}
-
-void bargraph_set_binary(int16_t value)
-{
-    bargraph_state = (uint32_t)value;
+    bargraph_state = value;
 
     bargraph_send_data();
 }

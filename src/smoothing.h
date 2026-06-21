@@ -26,28 +26,23 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   bargraph.h
+ * @file   smoothing.h
  * @author Dennis Witzig
- * @date   2022-10-15
- * @brief  This module contains the header to interact with a bar graph display
- *         connected to a MAX7219 display driver.
+ * @date   2026-06-20
+ * @brief  This module stabilises the per-frame fundamental-frequency estimate
+ *         before it is displayed.
  */
 
-#ifndef BARGRAPH_H_
-#define BARGRAPH_H_
+#ifndef SMOOTHING_H_
+#define SMOOTHING_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
-#include <stdint.h>
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
-#define BARGRAPH_LEFT 0
-#define BARGRAPH_RIGHT 1
-
-#define BARGRAPH_SIZE 20
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
@@ -60,10 +55,19 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
-void bargraph_set_level(uint8_t level, uint8_t origin);
-void bargraph_set_binary(uint32_t value);
+/**
+ * @brief  Stabilise the per-frame frequency estimate before it is displayed.
+ *         A non-positive input (silence) blanks the reading and resets the
+ *         filter. Otherwise the estimate is smoothed with an exponential moving
+ *         average while a note is held, transient half/double-pitch errors are
+ *         rejected (but accepted once an octave change persists), and a genuine
+ *         change of more than ~half a semitone snaps through immediately.
+ * @param[in] raw Latest per-frame frequency estimate in Hz (<= 0 for silence).
+ * @return Stabilised frequency in Hz, or 0.0 while silent.
+ */
+double smooth_frequency(double raw);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
-#endif /* BARGRAPH_H_ */
+#endif /* SMOOTHING_H_ */

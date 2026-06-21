@@ -44,6 +44,7 @@ For more information, please refer to <http://unlicense.org/>
 #include "analysis.h"
 #include "yin.h"
 #include "pitch.h"
+#include "smoothing.h"
 #include "config.h"
 #include "control.h"
 
@@ -59,19 +60,18 @@ typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
+static void greet_message(void);
 static void display_note(double frequency);
 static uint8_t signal_is_present(const int16_t *buffer);
-static double smooth_frequency(double raw);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-CONTROL_STATE current_state = INIT;
-double peak_freq;
+static CONTROL_STATE current_state = INIT;
+static double peak_freq;
 
-/* The just-filled buffer being analysed, and the one the ADC is filling next. */
+/* The just-filled buffer handed back by acquisition for analysis. */
 static int16_t *analysis_buffer;
-static int16_t *filling_buffer;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -79,7 +79,7 @@ static int16_t *filling_buffer;
 /**
  * @brief State machine controller of Tuna.
  */
-void control()
+void control(void)
 {
     switch (current_state) {
     case INIT:
@@ -87,23 +87,17 @@ void control()
         max7219_init();
         greet_message();
         /* Prime the pipeline: launch the first acquisition in the background. */
-        filling_buffer = acquisition_buffer_a;
-        acquisition_start(filling_buffer);
+        acquisition_prime();
         current_state = ACQUISITION;
-    	break;
+        break;
     case ACQUISITION:
         /*
-         * Collect the buffer the ADC has been filling, then immediately launch
-         * the next acquisition into the other buffer so sampling overlaps the
-         * analysis and display of this one (double-buffered pipeline). The CPU
-         * sleeps inside acquisition_wait() rather than spinning.
+         * Collect the just-filled frame; acquisition immediately relaunches the
+         * next fill into its other buffer, so sampling overlaps the analysis and
+         * display of this one (double-buffered pipeline). The CPU sleeps inside
+         * acquisition_collect() rather than spinning.
          */
-        acquisition_wait();
-        analysis_buffer = filling_buffer;
-        filling_buffer = (filling_buffer == acquisition_buffer_a)
-                       ? acquisition_buffer_b
-                       : acquisition_buffer_a;
-        acquisition_start(filling_buffer);
+        analysis_buffer = acquisition_collect();
         current_state = ANALYSIS;
         break;
     case ANALYSIS:
@@ -130,17 +124,21 @@ void control()
         current_state = ACQUISITION;
         break;
     case ERROR:
+    default:
+        /*
+         * Fault trap: unreachable in correct operation, but a corrupted state
+         * variable lands here. Latch an "Er" indication once and halt the CPU
+         * in low-power idle instead of re-driving the display in a tight loop.
+         */
         segment_display_alpha(0, 'E');
         segment_display_alpha(1, 'R');
-        current_state = ERROR;
-        break;
-    default:
-        current_state = ERROR;
-        break;
+        for (;;) {
+            hal_sleep_idle();
+        }
     }
 }
 
-void greet_message()
+static void greet_message(void)
 {
     bargraph_set_level(6, BARGRAPH_LEFT);
     segment_display_alpha(0, 'H');
@@ -165,8 +163,8 @@ void greet_message()
 
     hal_delay_ms(500);
 
-    max7219_write(0x01, 0);
-    max7219_write(0x02, 0);
+    max7219_write(MAX7219_DIGIT_0_REGISTER, 0);
+    max7219_write(MAX7219_DIGIT_1_REGISTER, 0);
     bargraph_set_level(0, BARGRAPH_LEFT);
 }
 
@@ -206,21 +204,30 @@ static void display_note(double frequency)
         position = (double)(BARGRAPH_SIZE - 1);
     }
 
-    bargraph_set_binary(0);
-    bargraph_set_element((uint8_t)position, BARGRAPH_ON);
+    /* Light just the needle element in a single display update. */
+    bargraph_set_binary(1UL << (uint8_t)position);
 }
 
 /**
  * @brief Report whether the just-acquired frame carries a usable signal, i.e.
- *        whether any sample reaches SILENCE_THRESHOLD in magnitude. Returns on
- *        the first loud sample, so a present signal costs almost nothing.
+ *        whether any sample deviates from the frame's DC level by at least
+ *        SILENCE_THRESHOLD. Gating on the AC excursion (distance from the mean)
+ *        rather than the raw sample magnitude keeps a residual DC bias on the
+ *        AC-coupled input from masking a quiet signal or registering as one.
  */
 static uint8_t signal_is_present(const int16_t *buffer)
 {
+    int32_t mean = 0;
+    int16_t dc;
     uint16_t k;
 
     for (k = 0; k < FFT_SIZE; ++k) {
-        int16_t s = buffer[k];
+        mean += buffer[k];
+    }
+    dc = (int16_t)(mean / FFT_SIZE);
+
+    for (k = 0; k < FFT_SIZE; ++k) {
+        int16_t s = (int16_t)(buffer[k] - dc);
         if (s < 0) {
             s = (int16_t)-s;
         }
@@ -230,72 +237,6 @@ static uint8_t signal_is_present(const int16_t *buffer)
     }
 
     return 0;
-}
-
-/**
- * @brief Stabilise the per-frame frequency estimate before it is displayed.
- *        A non-positive input (silence) blanks the reading and resets the
- *        filter. Otherwise the estimate is smoothed with an exponential moving
- *        average while a note is held, transient half/double-pitch errors are
- *        rejected (but accepted once an octave change persists), and a genuine
- *        change of more than ~half a semitone snaps through immediately.
- */
-static double smooth_frequency(double raw)
-{
-    static double smoothed = 0.0;
-    static uint8_t have = 0;
-    static uint8_t octave_votes = 0;
-
-    double corrected;
-    double ratio;
-
-    if (raw <= 0.0) {
-        have = 0;
-        smoothed = 0.0;
-        octave_votes = 0;
-        return 0.0;
-    }
-
-    if (!have) {
-        smoothed = raw;
-        have = 1;
-        octave_votes = 0;
-        return smoothed;
-    }
-
-    ratio = raw / smoothed;
-
-    if (ratio > 1.8 && ratio < 2.2) {
-        corrected = raw * 0.5;
-    } else if (ratio > 0.45 && ratio < 0.55) {
-        corrected = raw * 2.0;
-    } else {
-        corrected = 0.0; /* not an octave artifact */
-    }
-
-    if (corrected != 0.0) {
-        /* Hold the previous estimate unless the new octave keeps recurring. */
-        if (++octave_votes < OCTAVE_GIVE_IN) {
-            return smoothed;
-        }
-        smoothed = raw;
-        octave_votes = 0;
-        return smoothed;
-    }
-
-    octave_votes = 0;
-    corrected = raw;
-    ratio = corrected / smoothed;
-
-    if (ratio < 0.97 || ratio > 1.03) {
-        /* More than ~half a semitone away: a real note change, snap to it. */
-        smoothed = corrected;
-        return smoothed;
-    }
-
-    /* Same note held: smooth to steady the cents readout. */
-    smoothed = SMOOTHING_ALPHA * corrected + (1.0 - SMOOTHING_ALPHA) * smoothed;
-    return smoothed;
 }
 
 /*---------------------------------------------------------------------------*/

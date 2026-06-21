@@ -26,44 +26,99 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   bargraph.h
+ * @file   smoothing.c
  * @author Dennis Witzig
- * @date   2022-10-15
- * @brief  This module contains the header to interact with a bar graph display
- *         connected to a MAX7219 display driver.
+ * @date   2026-06-20
+ * @brief  This module stabilises the per-frame fundamental-frequency estimate
+ *         (exponential moving average plus octave-jump rejection) before it is
+ *         displayed. It is plain floating-point C with no AVR dependencies, so
+ *         it is exercised by the host regression tests.
  */
-
-#ifndef BARGRAPH_H_
-#define BARGRAPH_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
+#include "config.h"
+#include "smoothing.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
-#define BARGRAPH_LEFT 0
-#define BARGRAPH_RIGHT 1
-
-#define BARGRAPH_SIZE 20
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-/*                            GLOBAL VARIABLES                               */
+/*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-/*                           FUNCTION PROTOTYPES                             */
+/*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-void bargraph_set_level(uint8_t level, uint8_t origin);
-void bargraph_set_binary(uint32_t value);
+
+/*---------------------------------------------------------------------------*/
+/*                        FUNCTION IMPLEMENTATION                            */
+/*---------------------------------------------------------------------------*/
+double smooth_frequency(double raw)
+{
+    static double smoothed = 0.0;
+    static uint8_t have = 0;
+    static uint8_t octave_votes = 0;
+
+    double corrected;
+    double ratio;
+
+    if (raw <= 0.0) {
+        have = 0;
+        smoothed = 0.0;
+        octave_votes = 0;
+        return 0.0;
+    }
+
+    if (!have) {
+        smoothed = raw;
+        have = 1;
+        octave_votes = 0;
+        return smoothed;
+    }
+
+    ratio = raw / smoothed;
+
+    if (ratio > 1.8 && ratio < 2.2) {
+        corrected = raw * 0.5;
+    } else if (ratio > 0.45 && ratio < 0.55) {
+        corrected = raw * 2.0;
+    } else {
+        corrected = 0.0; /* not an octave artifact */
+    }
+
+    if (corrected != 0.0) {
+        /* Hold the previous estimate unless the new octave keeps recurring. */
+        if (++octave_votes < OCTAVE_GIVE_IN) {
+            return smoothed;
+        }
+        smoothed = raw;
+        octave_votes = 0;
+        return smoothed;
+    }
+
+    octave_votes = 0;
+    corrected = raw;
+    ratio = corrected / smoothed;
+
+    if (ratio < 0.97 || ratio > 1.03) {
+        /* More than ~half a semitone away: a real note change, snap to it. */
+        smoothed = corrected;
+        return smoothed;
+    }
+
+    /* Same note held: smooth to steady the cents readout. */
+    smoothed = SMOOTHING_ALPHA * corrected + (1.0 - SMOOTHING_ALPHA) * smoothed;
+    return smoothed;
+}
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
-#endif /* BARGRAPH_H_ */

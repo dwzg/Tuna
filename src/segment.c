@@ -54,16 +54,16 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-const uint8_t FONT_ALPHA[26] = {
+static const uint8_t FONT_ALPHA[26] = {
     119,  31,  78,  61,  79,  71,  94,  23,  16,  60,  87,  14, 118,
      21,  29, 103, 115,   5,  27,  15,  28,  62,  63,  55,  59, 108
 };
 
-const uint8_t FONT_NUM[10] = {
+static const uint8_t FONT_NUM[10] = {
     126,  48, 109, 121,  51,  91,  95, 114, 127, 123
 };
 
-const uint8_t SMILE[2] = {
+static const uint8_t SMILE[2] = {
     44, 26
 };
 
@@ -100,21 +100,20 @@ void segment_display_alpha(uint8_t digit, uint8_t alpha)
 
 void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
 {
+    uint8_t glyph;
+
     if (value <= 9) {
+        glyph = FONT_NUM[value];
+        if (dotpoint) {
+            glyph |= 0x80;
+        }
+
         switch (digit) {
         case 0:
-            if (dotpoint) {
-                max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_NUM[value] | 0x80);
-            } else {
-                max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_NUM[value]);
-            }
-        	break;
+            max7219_write(MAX7219_DIGIT_0_REGISTER, glyph);
+            break;
         case 1:
-            if (dotpoint) {
-                max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_NUM[value] | 0x80);
-            } else {
-                max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_NUM[value]);
-            }
+            max7219_write(MAX7219_DIGIT_1_REGISTER, glyph);
             break;
         default:
             break;
@@ -122,15 +121,7 @@ void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
     }
 }
 
-void segment_display_num(uint8_t value)
-{
-    if (value <= 99) {
-        max7219_write(MAX7219_DIGIT_0_REGISTER, FONT_NUM[value / 10]);
-        max7219_write(MAX7219_DIGIT_1_REGISTER, FONT_NUM[value % 10]);
-    }
-}
-
-void segment_smile()
+void segment_smile(void)
 {
     max7219_write(MAX7219_DIGIT_0_REGISTER, SMILE[0]);
     max7219_write(MAX7219_DIGIT_1_REGISTER, SMILE[1]);
