@@ -35,15 +35,6 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
-#include <stdint.h>
-#include "config.h"
-#include "hal.h"
-#include "max7219.h"
-#include "segment.h"
-#include "bargraph.h"
-#include "acquisition.h"
-#include "window.h"
-#include "fft.h"
 #include "control.h"
 
 /*---------------------------------------------------------------------------*/
