@@ -26,19 +26,19 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   bargraph.c
+ * @file   display.c
  * @author Dennis Witzig
- * @date   2022-10-15
- * @brief  This module contains the code to interact with a bar graph display
- *         connected to a MAX7219 display driver.
+ * @date   2026-06-21
+ * @brief  This module contains the shadow framebuffer over the MAX7219 digit
+ *         registers (see display.h).
  */
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
+#include "max7219.h"
 #include "display.h"
-#include "bargraph.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
@@ -51,60 +51,37 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
-static void bargraph_stage(void);
 
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
-static uint32_t bargraph_state = 0;
+/* Digit values staged by the renderers since the last flush. */
+static uint8_t shadow[DISPLAY_DIGITS];
+
+/* Digit values the MAX7219 was last given. Zero-initialised to match the
+ * digit registers right after max7219_reset()/max7219_init(). */
+static uint8_t shipped[DISPLAY_DIGITS];
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
 /*---------------------------------------------------------------------------*/
-/**
- * @brief Stage the current bar graph state into the display framebuffer. The
- *        three packed digits become visible on the next display_flush().
- */
-static void bargraph_stage(void)
+void display_set_digit(uint8_t digit, uint8_t value)
 {
-    uint8_t data_dig_2, data_dig_3, data_dig_4;
-
-    data_dig_2 = (uint8_t)((bargraph_state & 0x000FE000) >> 13) | (uint8_t)((bargraph_state & 0x00001000) >> 5);
-    data_dig_3 = (uint8_t)((bargraph_state & 0x00000FE0) >> 5) | (uint8_t)((bargraph_state & 0x00000010) << 3);
-    data_dig_4 = (uint8_t)(bargraph_state & 0x0000000F) << 3;
-
-    display_set_digit(2, data_dig_2);
-    display_set_digit(3, data_dig_3);
-    display_set_digit(4, data_dig_4);
+    if (digit < DISPLAY_DIGITS) {
+        shadow[digit] = value;
+    }
 }
 
-/**
- * @brief Sets the bar graph to a given level bar starting from origin. Staged
- *        into the framebuffer; becomes visible on the next display_flush().
- * @param[in] level Level bar to display.
- * @param[in] origin Origin of the level bar.
- */
-void bargraph_set_level(uint8_t level, uint8_t origin)
+void display_flush(void)
 {
-    uint32_t bit_mask;
+    uint8_t digit;
 
-    if (level <= BARGRAPH_SIZE) {
-        bit_mask = (1UL << level) - 1UL;
-        if (origin == BARGRAPH_LEFT) {
-            bargraph_state = bit_mask;
-        } else {
-            bargraph_state = bit_mask << (BARGRAPH_SIZE - level);
+    for (digit = 0; digit < DISPLAY_DIGITS; ++digit) {
+        if (shadow[digit] != shipped[digit]) {
+            max7219_write((uint8_t)(MAX7219_DIGIT_0_REGISTER + digit), shadow[digit]);
+            shipped[digit] = shadow[digit];
         }
     }
-
-    bargraph_stage();
-}
-
-void bargraph_set_binary(uint32_t value)
-{
-    bargraph_state = value;
-
-    bargraph_stage();
 }
 
 /*---------------------------------------------------------------------------*/

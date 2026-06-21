@@ -38,6 +38,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include "hal.h"
 #include "max7219.h"
+#include "display.h"
 #include "segment.h"
 #include "bargraph.h"
 #include "acquisition.h"
@@ -143,29 +144,34 @@ static void greet_message(void)
     bargraph_set_level(6, BARGRAPH_LEFT);
     segment_display_alpha(0, 'H');
     segment_display_alpha(1, 'I');
+    display_flush();
 
     hal_delay_ms(1000);
 
     bargraph_set_level(13, BARGRAPH_LEFT);
     segment_smile();
+    display_flush();
 
     hal_delay_ms(1000);
 
     bargraph_set_level(16, BARGRAPH_LEFT);
     segment_display_alpha(0, 'T');
     segment_display_alpha(1, 'U');
+    display_flush();
 
     hal_delay_ms(500);
 
     bargraph_set_level(20, BARGRAPH_LEFT);
     segment_display_alpha(0, 'N');
     segment_display_alpha(1, 'A');
+    display_flush();
 
     hal_delay_ms(500);
 
-    max7219_write(MAX7219_DIGIT_0_REGISTER, 0);
-    max7219_write(MAX7219_DIGIT_1_REGISTER, 0);
+    display_set_digit(0, 0);
+    display_set_digit(1, 0);
     bargraph_set_level(0, BARGRAPH_LEFT);
+    display_flush();
 }
 
 /**
@@ -187,9 +193,10 @@ static void display_note(double frequency)
     double position;
 
     if (!note.valid) {
-        max7219_write(MAX7219_DIGIT_0_REGISTER, 0);
-        max7219_write(MAX7219_DIGIT_1_REGISTER, 0);
+        display_set_digit(0, 0);
+        display_set_digit(1, 0);
         bargraph_set_binary(0);
+        display_flush();
         return;
     }
 
@@ -204,8 +211,10 @@ static void display_note(double frequency)
         position = (double)(BARGRAPH_SIZE - 1);
     }
 
-    /* Light just the needle element in a single display update. */
+    /* Stage the needle, then push the whole frame in one flush: only the digit
+     * registers that changed since last frame are actually transmitted. */
     bargraph_set_binary(1UL << (uint8_t)position);
+    display_flush();
 }
 
 /**

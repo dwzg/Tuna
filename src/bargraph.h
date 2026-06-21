@@ -60,6 +60,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
+/* These stage into the display framebuffer; call display_flush() to show them. */
 void bargraph_set_level(uint8_t level, uint8_t origin);
 void bargraph_set_binary(uint32_t value);
 
