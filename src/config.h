@@ -118,11 +118,9 @@ For more information, please refer to <http://unlicense.org/>
 #define WINDOW_HANNING   2
 #define WINDOW_HAMMING   3
 #define WINDOW_BLACKMAN  4
-#define WINDOW_BARTLETT  5   /* triangular */
-#define WINDOW_GAUSS     6
 
 #ifndef WINDOW_FUNCTION
-#define WINDOW_FUNCTION WINDOW_HAMMING
+#define WINDOW_FUNCTION WINDOW_HANNING
 #endif
 
 /**
