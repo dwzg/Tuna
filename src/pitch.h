@@ -49,7 +49,7 @@ For more information, please refer to <http://unlicense.org/>
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
 typedef enum {
-#ifdef SHARP
+#ifdef ACCIDENTAL_SHARP
     C, C_SHARP, D, D_SHARP, E, F, F_SHARP, G, G_SHARP, A, A_SHARP, H
 #else
     C, D_FLAT, D, E_FLAT, E, F, G_FLAT, G, A_FLAT, A, H_FLAT, H

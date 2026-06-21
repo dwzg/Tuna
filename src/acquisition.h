@@ -68,7 +68,7 @@ void acquisition_prime(void);
  *        two internal buffers so sampling overlaps analysis/display
  *        (double-buffered pipeline). Blocks (sleeping the CPU between samples)
  *        until the in-flight fill completes.
- * @return Pointer to the just-filled FFT_SIZE buffer. It is owned by the caller
+ * @return Pointer to the just-filled FRAME_SIZE buffer. It is owned by the caller
  *         only until the next acquisition_collect(), and may be overwritten in
  *         place during analysis.
  */

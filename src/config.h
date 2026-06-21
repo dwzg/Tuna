@@ -42,15 +42,16 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
-/**
- * @brief Full length of FFT.
- */
-#define FFT_SIZE 1024
+/* --- Acquisition / framing (shared by both pitch methods) --------------- */
 
 /**
- * @brief Log2 of FFT_SIZE.
+ * @brief Number of samples in one analysis frame. This is the acquisition
+ *        buffer length that both pitch methods consume; only the FFT path
+ *        treats it as a transform length, so it is named for the frame rather
+ *        than for the FFT. Must be a power of two (the FFT path and the derived
+ *        LOG2_FRAME_SIZE below both require it).
  */
-#define LOG2_FFT_SIZE 10
+#define FRAME_SIZE 1024
 
 /**
  * @brief Sample frequency in Hz.
@@ -59,14 +60,13 @@ For more information, please refer to <http://unlicense.org/>
 #define SAMPLE_FREQ 4096UL
 
 /**
- * @brief Window function to use.
+ * @brief Peak input amplitude (in ADC counts, full scale +-2048 for the 12 bit
+ *        single-ended result) below which a frame is treated as silence and the
+ *        display is blanked instead of reporting a noise-driven note.
  */
-#define HAMMING
+#define SILENCE_THRESHOLD 40
 
-/**
- * @brief Note half step convention to use.
- */
-#define SHARP
+/* --- Pitch-detection method --------------------------------------------- */
 
 /**
  * @brief Pitch-detection method. Define exactly one of the following. The two
@@ -86,12 +86,42 @@ For more information, please refer to <http://unlicense.org/>
 #error "config.h: define exactly one of PITCH_METHOD_YIN or PITCH_METHOD_FFT"
 #endif
 
+/* --- YIN pitch method --------------------------------------------------- */
+
 /**
  * @brief YIN absolute threshold. The first dip in the cumulative-mean-normalized
  *        difference function below this value is taken as the period estimate.
  *        Typical range 0.10 - 0.20; lower is stricter.
  */
 #define YIN_THRESHOLD 0.15f
+
+/* --- FFT pitch method (unused when PITCH_METHOD_YIN is selected) --------- */
+
+/**
+ * @brief Log2 of FRAME_SIZE, the FFT's transform order. Derived from
+ *        FRAME_SIZE so the two cannot drift apart; __builtin_ctz of a power of
+ *        two yields its base-2 logarithm, and the compiler folds it to a
+ *        constant (it is only ever used in ordinary integer expressions, never
+ *        in a #if or array bound).
+ */
+#define LOG2_FRAME_SIZE __builtin_ctz(FRAME_SIZE)
+
+/**
+ * @brief Window function applied before the FFT. Set WINDOW_FUNCTION to exactly
+ *        one of the WINDOW_* identifiers below; window.c selects the matching
+ *        coefficient table and errors out if it is unset or unknown. (The
+ *        window is an FFT-path concept - the YIN method does not window its
+ *        input.) The build system can override the default by predefining
+ *        WINDOW_FUNCTION, e.g. -DWINDOW_FUNCTION=WINDOW_BLACKMAN.
+ */
+#define WINDOW_DIRICHLET 1   /* rectangular - no taper */
+#define WINDOW_HANNING   2
+#define WINDOW_HAMMING   3
+#define WINDOW_BLACKMAN  4
+
+#ifndef WINDOW_FUNCTION
+#define WINDOW_FUNCTION WINDOW_HANNING
+#endif
 
 /**
  * @brief FFT pitch method, octave correction. The strongest spectral bin is
@@ -108,12 +138,14 @@ For more information, please refer to <http://unlicense.org/>
 #define FFT_MAX_SUBHARMONIC 4
 #define FFT_HARMONIC_THRESHOLD_SHIFT 4
 
+/* --- Note naming / display ---------------------------------------------- */
+
 /**
- * @brief Peak input amplitude (in ADC counts, full scale +-2048 for the 12 bit
- *        single-ended result) below which a frame is treated as silence and the
- *        display is blanked instead of reporting a noise-driven note.
+ * @brief Note half step convention to use.
  */
-#define SILENCE_THRESHOLD 40
+#define ACCIDENTAL_SHARP
+
+/* --- Frequency smoothing ------------------------------------------------ */
 
 /**
  * @brief Exponential-moving-average weight applied to the newest frequency
@@ -127,7 +159,7 @@ For more information, please refer to <http://unlicense.org/>
  *        accepted as a real octave change rather than a transient half/double-
  *        pitch error from the pitch estimator.
  */
-#define OCTAVE_GIVE_IN 3
+#define OCTAVE_JUMP_FRAMES 3
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */

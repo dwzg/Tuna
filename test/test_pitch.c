@@ -8,7 +8,7 @@ For more information, please refer to <http://unlicense.org/>
  * @brief  Host regression test for the note mapper (src/pitch.c). Checks that
  *         pitch_from_frequency() maps known frequencies to the right pitch
  *         class/octave with the expected cents deviation, and rejects
- *         out-of-range input. The default (SHARP) accidental convention is
+ *         out-of-range input. The default (ACCIDENTAL_SHARP) accidental convention is
  *         assumed, matching config.h.
  */
 

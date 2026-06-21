@@ -82,7 +82,7 @@ For more information, please refer to <http://unlicense.org/>
  * Since we only use 3/4 of N_WAVE, we define only
  * this many samples, in order to conserve data space.
  */
-const int16_t SINEWAVE[FFT_SIZE - FFT_SIZE / 4] = {
+const int16_t SINEWAVE[FRAME_SIZE - FRAME_SIZE / 4] = {
  		 0,    201,    402,    603,    804,   1005,   1206,   1406,
 	  1607,   1808,   2009,   2209,   2410,   2610,   2811,   3011,
 	  3211,   3411,   3611,   3811,   4011,   4210,   4409,   4608,
@@ -218,7 +218,7 @@ int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse)
 	n = 1 << m;
 
 	/* max FFT size = N_WAVE */
-	if (n > FFT_SIZE) {
+	if (n > FRAME_SIZE) {
 		return -1;
 	}
 
@@ -246,7 +246,7 @@ int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse)
 	}
 
 	l = 1;
-	k = LOG2_FFT_SIZE - 1;
+	k = LOG2_FRAME_SIZE - 1;
 	while (l < n) {
 		if (inverse) {
 			/* variable scaling, depending upon data */
@@ -283,7 +283,7 @@ int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse)
 		for (m = 0; m < l; ++m) {
 			j = m << k;
 			/* 0 <= j < N_WAVE/2 */
-			wr = SINEWAVE[j + FFT_SIZE / 4];
+			wr = SINEWAVE[j + FRAME_SIZE / 4];
 			wi = -SINEWAVE[j];
 			if (inverse) {
 				wi = -wi;

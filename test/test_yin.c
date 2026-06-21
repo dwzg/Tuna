@@ -26,9 +26,9 @@ static int failures = 0;
 /* Build a Hamming-tapered tone with up to 6 harmonics and run YIN on it. */
 static double detect(double f0, const double *weights, int nh, double amp)
 {
-    int16_t x[FFT_SIZE];
-    for (int n = 0; n < FFT_SIZE; ++n) {
-        double w = 0.54 - 0.46 * cos(2.0 * M_PI * n / (FFT_SIZE - 1));
+    int16_t x[FRAME_SIZE];
+    for (int n = 0; n < FRAME_SIZE; ++n) {
+        double w = 0.54 - 0.46 * cos(2.0 * M_PI * n / (FRAME_SIZE - 1));
         double s = 0.0;
         for (int h = 1; h <= nh && f0 * h < SAMPLE_FREQ / 2.0; ++h)
             s += weights[h - 1] * amp * sin(2.0 * M_PI * f0 * h * n / SAMPLE_FREQ);

@@ -80,7 +80,7 @@ INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)   [ERROR is 
 ```
 
 Acquisition and analysis are **double-buffered and pipelined**: `acquisition.c` owns two
-`int16_t[FFT_SIZE]` buffers internally and ping-pongs between them. While one buffer is
+`int16_t[FRAME_SIZE]` buffers internally and ping-pongs between them. While one buffer is
 analysed, the ADC fills the other in the background, so sampling overlaps analysis/display
 instead of stalling it. Within a single frame the signal-processing stages still operate
 **in place on that one buffer** (the pitch estimators overwrite it), so keep that in mind
@@ -121,7 +121,7 @@ before adding intermediate copies:
   fixed-point in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`).
   `analysis.c` runs it as a **real-input FFT**: it packs the real signal into a half-size
   complex FFT and splits the result, so the FFT path costs ~half the transform work and
-  an `FFT_SIZE/2` scratch buffer instead of a full imaginary array. `yin.c` is the
+  an `FRAME_SIZE/2` scratch buffer instead of a full imaginary array. `yin.c` is the
   alternative time-domain (YIN autocorrelation) pitch estimator. `pitch.c` maps
   frequencies to musical pitch classes; `smoothing.c` stabilises the per-frame estimate
   (EMA plus octave-jump rejection).
@@ -132,11 +132,15 @@ before adding intermediate copies:
 
 ### Compile-time configuration
 
-`config.h` is the single tuning point. It defines `FFT_SIZE` (1024) and the matching
-`LOG2_FFT_SIZE` (10) — **keep these consistent** — plus `SAMPLE_FREQ`, the window
-function (`HAMMING`), and the accidental convention (`SHARP` vs flat). The window and
-note-naming choices switch behavior via `#ifdef` (e.g. the `PITCH_CLASS` enum in
-`pitch.h`).
+`config.h` is the single tuning point. It defines `FRAME_SIZE` (1024, the analysis
+frame / acquisition buffer length shared by both pitch methods; only the FFT path also
+treats it as a transform length) with `LOG2_FRAME_SIZE` derived from it via
+`__builtin_ctz` so the two cannot drift, plus `SAMPLE_FREQ`, the window function
+(`WINDOW_FUNCTION`, set to one of the `WINDOW_*` values), and the accidental convention
+(`ACCIDENTAL_SHARP` vs flat). `WINDOW_FUNCTION` is a single-valued selector — `window.c`
+picks the matching coefficient table with `#if/#elif` and `#error`s if it is unset or
+unknown — while the note-naming choice still switches via `#ifdef` (e.g. the `PITCH_CLASS`
+enum in `pitch.h`).
 
 ## Conventions
 

@@ -96,7 +96,7 @@ double smooth_frequency(double raw)
 
     if (corrected != 0.0) {
         /* Hold the previous estimate unless the new octave keeps recurring. */
-        if (++octave_votes < OCTAVE_GIVE_IN) {
+        if (++octave_votes < OCTAVE_JUMP_FRAMES) {
             return smoothed;
         }
         smoothed = raw;

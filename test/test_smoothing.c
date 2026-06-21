@@ -9,7 +9,7 @@ For more information, please refer to <http://unlicense.org/>
  *         Exercises the silence reset, the EMA hold, transient octave-error
  *         rejection (with eventual give-in), and the snap-through on a genuine
  *         note change. Assumes the config.h defaults SMOOTHING_ALPHA=0.5 and
- *         OCTAVE_GIVE_IN=3.
+ *         OCTAVE_JUMP_FRAMES=3.
  */
 
 #include <stdio.h>
@@ -44,7 +44,7 @@ int main(void)
     smooth_frequency(100.0);
     expect("snap", smooth_frequency(130.0), 130.0, 1e-9);
 
-    /* A sudden octave jump is rejected until it persists OCTAVE_GIVE_IN frames. */
+    /* A sudden octave jump is rejected until it persists OCTAVE_JUMP_FRAMES frames. */
     smooth_frequency(0.0);
     smooth_frequency(100.0);
     y = smooth_frequency(200.0);            /* vote 1: held */

@@ -50,9 +50,9 @@ For more information, please refer to <http://unlicense.org/>
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Number of usable spectral bins (0 .. Nyquist) of a real FFT_SIZE FFT.
+ * @brief Number of usable spectral bins (0 .. Nyquist) of a real FRAME_SIZE FFT.
  */
-#define SPECTRUM_BINS (FFT_SIZE / 2)
+#define SPECTRUM_BINS (FRAME_SIZE / 2)
 
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
@@ -67,7 +67,7 @@ static uint8_t fundamental_divisor(const int16_t spectrum[], uint16_t peak_bin, 
 /*---------------------------------------------------------------------------*/
 /*
  * Imaginary half of the N/2-point complex FFT used by the real-input transform
- * (the real half is the caller's buffer). Only FFT_SIZE/2 entries are needed,
+ * (the real half is the caller's buffer). Only FRAME_SIZE/2 entries are needed,
  * half the storage of a full complex imaginary buffer.
  */
 static int16_t fft_scratch[SPECTRUM_BINS];
@@ -82,7 +82,7 @@ double analysis_fft_frequency(int16_t samples[])
     int16_t max;
     uint8_t harmonic_number;
     int32_t mean = 0;
-    double freq_bin = (double)SAMPLE_FREQ / (double)FFT_SIZE;
+    double freq_bin = (double)SAMPLE_FREQ / (double)FRAME_SIZE;
     double delta = 0.0;
 
     /*
@@ -90,11 +90,11 @@ double analysis_fft_frequency(int16_t samples[])
      * at VDD/2 and re-centred by a fixed offset, so a small residual bias can
      * remain and would otherwise leak through the window into the low bins.
      */
-    for (i = 0; i < FFT_SIZE; ++i) {
+    for (i = 0; i < FRAME_SIZE; ++i) {
         mean += samples[i];
     }
-    mean /= FFT_SIZE;
-    for (i = 0; i < FFT_SIZE; ++i) {
+    mean /= FRAME_SIZE;
+    for (i = 0; i < FRAME_SIZE; ++i) {
         samples[i] = (int16_t)((int32_t)samples[i] - mean);
     }
 
@@ -106,7 +106,7 @@ double analysis_fft_frequency(int16_t samples[])
      * sequence z[n] = x[2n] + j*x[2n+1], transformed with an N/2-point complex
      * FFT, and a split step then recovers the N/2+1 magnitude bins of the true
      * N-point spectrum. This halves both the transform work and the RAM (one
-     * N/2 scratch array instead of a full FFT_SIZE imaginary buffer) compared
+     * N/2 scratch array instead of a full FRAME_SIZE imaginary buffer) compared
      * with running a full complex FFT on a zeroed imaginary part.
      *
      * Pack: the odd samples go to the scratch (imaginary) array and the even
@@ -120,7 +120,7 @@ double analysis_fft_frequency(int16_t samples[])
         samples[i] = samples[2 * i];
     }
 
-    fft(samples, fft_scratch, LOG2_FFT_SIZE - 1, 0);
+    fft(samples, fft_scratch, LOG2_FRAME_SIZE - 1, 0);
 
     /*
      * Split the N/2-point spectrum Z (real in samples[], imaginary in
@@ -237,7 +237,7 @@ static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint
     int16_t xei  = (int16_t)(((int32_t)ai - bi) >> 1);
     int16_t xor_ = (int16_t)(((int32_t)ai + bi) >> 1);  /* odd-sample spectrum */
     int16_t xoi  = (int16_t)(((int32_t)br - ar) >> 1);
-    int16_t wr = SINEWAVE[k + FFT_SIZE / 4];            /*  cos(2*pi*k/N) */
+    int16_t wr = SINEWAVE[k + FRAME_SIZE / 4];            /*  cos(2*pi*k/N) */
     int16_t wi = (int16_t)(-SINEWAVE[k]);               /* -sin(2*pi*k/N) */
     int16_t pr = (int16_t)(fix_mpy(wr, xor_) - fix_mpy(wi, xoi));
     int16_t pi = (int16_t)(fix_mpy(wr, xoi) + fix_mpy(wi, xor_));

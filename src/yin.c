@@ -50,7 +50,7 @@ For more information, please refer to <http://unlicense.org/>
 /**
  * @brief Integration window length: number of sample pairs summed per lag.
  */
-#define YIN_W (FFT_SIZE / 2)
+#define YIN_W (FRAME_SIZE / 2)
 
 /**
  * @brief Maximum lag. Sets the lowest detectable frequency = SAMPLE_FREQ / YIN_TAU_MAX.
@@ -58,7 +58,7 @@ For more information, please refer to <http://unlicense.org/>
  *        string (a 5-string low B is ~31 Hz), so the extra range up to 8 Hz that
  *        a larger lag would buy is unused. The difference-function cost is
  *        O(YIN_W * YIN_TAU_MAX), so halving the lag halves the dominant loop.
- *        The window only needs YIN_W + YIN_TAU_MAX <= FFT_SIZE samples.
+ *        The window only needs YIN_W + YIN_TAU_MAX <= FRAME_SIZE samples.
  */
 #define YIN_TAU_MAX 256
 
