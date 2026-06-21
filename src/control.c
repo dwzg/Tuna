@@ -42,7 +42,7 @@ For more information, please refer to <http://unlicense.org/>
 #include "segment.h"
 #include "bargraph.h"
 #include "acquisition.h"
-#include "analysis.h"
+#include "spectral.h"
 #include "yin.h"
 #include "pitch.h"
 #include "smoothing.h"
@@ -114,7 +114,7 @@ void control(void)
 #if defined(PITCH_METHOD_YIN)
             peak_freq = yin_frequency(analysis_buffer);
 #elif defined(PITCH_METHOD_FFT)
-            peak_freq = analysis_fft_frequency(analysis_buffer);
+            peak_freq = spectral_frequency(analysis_buffer);
 #endif
         }
         peak_freq = smooth_frequency(peak_freq);

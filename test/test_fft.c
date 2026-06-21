@@ -5,7 +5,7 @@ For more information, please refer to <http://unlicense.org/>
 
 /**
  * @file   test_fft.c
- * @brief  Host regression test for the FFT pitch path (src/analysis.c +
+ * @brief  Host regression test for the FFT pitch path (src/spectral.c +
  *         src/fft.c, compiled with PITCH_METHOD_FFT). Covers the real-input FFT
  *         frequency accuracy on pure tones and the HPS-style octave correction
  *         on weak/missing-fundamental tones. Runs natively (no AVR), so the
@@ -17,7 +17,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include <math.h>
 #include "config.h"
-#include "analysis.h"
+#include "spectral.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -44,7 +44,7 @@ static double detect(double f0, const double *weights, int nh, double amp)
             s += weights[h - 1] * amp * sin(2.0 * M_PI * f0 * h * n / SAMPLE_FREQ);
         x[n] = (int16_t)(s > 2047 ? 2047 : s < -2048 ? -2048 : lround(s));
     }
-    return analysis_fft_frequency(x);
+    return spectral_frequency(x);
 }
 
 static void expect_cents(const char *name, double got, double f0, double tol_cents)

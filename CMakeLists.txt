@@ -71,7 +71,7 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
     -Wl,-Map=${PROJECT_NAME}.map
 )
 
-# analysis.c / pitch.c use the math library.
+# spectral.c / pitch.c use the math library.
 target_link_libraries(${PROJECT_NAME}.elf m)
 
 # ---------------------------------------------------------------------------

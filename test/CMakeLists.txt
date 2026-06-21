@@ -21,8 +21,8 @@ target_include_directories(test_yin PRIVATE "${SRC}")
 target_link_libraries(test_yin m)
 add_test(NAME yin COMMAND test_yin)
 
-# FFT path (force PITCH_METHOD_FFT so analysis_fft_frequency is compiled in).
-add_executable(test_fft test_fft.c "${SRC}/analysis.c" "${SRC}/fft.c")
+# FFT path (force PITCH_METHOD_FFT so spectral_frequency is compiled in).
+add_executable(test_fft test_fft.c "${SRC}/spectral.c" "${SRC}/fft.c")
 target_include_directories(test_fft PRIVATE "${SRC}")
 target_compile_definitions(test_fft PRIVATE PITCH_METHOD_FFT)
 target_link_libraries(test_fft m)
@@ -30,7 +30,7 @@ add_test(NAME fft COMMAND test_fft)
 
 # Window comparison benchmark (FFT path). Reports per-window pitch accuracy and
 # guards that the shipped default window stays accurate.
-add_executable(bench_window bench_window.c "${SRC}/analysis.c" "${SRC}/fft.c")
+add_executable(bench_window bench_window.c "${SRC}/spectral.c" "${SRC}/fft.c")
 target_include_directories(bench_window PRIVATE "${SRC}")
 target_compile_definitions(bench_window PRIVATE PITCH_METHOD_FFT)
 target_link_libraries(bench_window m)

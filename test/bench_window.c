@@ -6,7 +6,7 @@ For more information, please refer to <http://unlicense.org/>
 /**
  * @file   bench_window.c
  * @brief  Host benchmark comparing FFT-path pitch accuracy across window
- *         functions (src/analysis.c + src/fft.c, compiled with
+ *         functions (src/spectral.c + src/fft.c, compiled with
  *         PITCH_METHOD_FFT). For each window it sweeps a corpus of synthetic
  *         tones - pure, harmonic-rich and weak-fundamental, clean and noisy -
  *         and reports the absolute pitch error in cents (mean / p95 / max) plus
@@ -28,7 +28,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <string.h>
 #include <math.h>
 #include "config.h"
-#include "analysis.h"
+#include "spectral.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
@@ -44,7 +44,7 @@ static const char *WIN_NAME[WIN_COUNT] = {
     "Dirichlet", "Hanning", "Hamming", "Blackman"
 };
 
-/* Which window the next analysis_fft_frequency() call should apply. */
+/* Which window the next spectral_frequency() call should apply. */
 static int g_window = WIN_HANNING;
 
 /*---------------------------------------------------------------------------*/
@@ -109,7 +109,7 @@ static double detect(double f0, const double *weights, int nh, double amp,
         s += noise_amp * noise();
         x[n] = (int16_t)(s > 2047 ? 2047 : s < -2048 ? -2048 : lround(s));
     }
-    return analysis_fft_frequency(x);
+    return spectral_frequency(x);
 }
 
 static int cmp_double(const void *a, const void *b)

@@ -62,7 +62,7 @@ int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse);
 
 /**
  * @brief Fixed-point Q15 multiply with rounding (exposed for the real-FFT
- *        split step in analysis.c).
+ *        split step in spectral.c).
  */
 int16_t fix_mpy(int16_t a, int16_t b);
 

@@ -26,7 +26,7 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   analysis.c
+ * @file   spectral.c
  * @author Dennis Witzig
  * @date   2022-10-21
  * @brief  This module contains the code to analyze the audio spectrum and
@@ -38,7 +38,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
 #include "config.h"
-#include "analysis.h"
+#include "spectral.h"
 
 #ifdef PITCH_METHOD_FFT
 
@@ -75,7 +75,7 @@ static int16_t fft_scratch[SPECTRUM_BINS];
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
 /*---------------------------------------------------------------------------*/
-double analysis_fft_frequency(int16_t samples[])
+double spectral_frequency(int16_t samples[])
 {
     uint16_t i;
     uint16_t max_index;

@@ -45,7 +45,7 @@ gitignored.
 
 ## Testing / CI
 
-The DSP and pure decision logic (`fft.c`, `analysis.c`, `yin.c`, `pitch.c`,
+The DSP and pure decision logic (`fft.c`, `spectral.c`, `yin.c`, `pitch.c`,
 `smoothing.c`) is plain integer/fixed-point/floating C with no AVR dependencies, so it is
 exercised by **host regression tests** under `test/` (`test_fft`, `test_yin`,
 `test_pitch`, `test_smoothing`) that compile the real sources with the native compiler
@@ -94,7 +94,7 @@ before adding intermediate copies:
    pitch method selected in `config.h` estimates the fundamental frequency:
    - **YIN** (default) — `yin_frequency()` (`yin.c`) does a time-domain autocorrelation
      estimate; no windowing/FFT involved.
-   - **FFT** — `analysis_fft_frequency()` (`analysis.c`) removes DC, applies
+   - **FFT** — `spectral_frequency()` (`spectral.c`) removes DC, applies
      `window_apply_window()`, runs `fft()` (`fft.c`) as an in-place real-input transform
      (fixed-point; see `fix_mpy`), converts to magnitudes and returns the
      parabolically-interpolated peak frequency with HPS-style octave correction.
@@ -117,9 +117,9 @@ before adding intermediate copies:
   render numbers/letters/levels and *stage* them into `display.c`, a 5-byte shadow of the
   MAX7219 digit registers. A single `display_flush()` then transmits only the digits that
   changed since the last frame, coalescing each frame's updates into one atomic burst.
-- **DSP (`fft.c`, `window.c`, `analysis.c`, `yin.c`, `pitch.c`)** — `fft.c` is a
+- **DSP (`fft.c`, `window.c`, `spectral.c`, `yin.c`, `pitch.c`)** — `fft.c` is a
   fixed-point in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`).
-  `analysis.c` runs it as a **real-input FFT**: it packs the real signal into a half-size
+  `spectral.c` runs it as a **real-input FFT**: it packs the real signal into a half-size
   complex FFT and splits the result, so the FFT path costs ~half the transform work and
   an `FRAME_SIZE/2` scratch buffer instead of a full imaginary array. `yin.c` is the
   alternative time-domain (YIN autocorrelation) pitch estimator. `pitch.c` maps
