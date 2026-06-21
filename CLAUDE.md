@@ -113,8 +113,10 @@ before adding intermediate copies:
   shift clock on PC2 while driving data on PC1.)
 - **Driver (`max7219.c/.h`)** — register-level MAX7219 driver (register addresses are
   `#define`s); clocks each 16-bit frame out through the HAL pin setters.
-- **Display (`segment.c/.h`, `bargraph.c/.h`)** — present numbers/letters/levels via the
-  MAX7219 driver.
+- **Display (`display.c/.h`, `segment.c/.h`, `bargraph.c/.h`)** — `segment.c`/`bargraph.c`
+  render numbers/letters/levels and *stage* them into `display.c`, a 5-byte shadow of the
+  MAX7219 digit registers. A single `display_flush()` then transmits only the digits that
+  changed since the last frame, coalescing each frame's updates into one atomic burst.
 - **DSP (`fft.c`, `window.c`, `analysis.c`, `yin.c`, `pitch.c`)** — `fft.c` is a
   fixed-point in-place complex FFT (`fft()`, plus the shared `fix_mpy`/`SINEWAVE`).
   `analysis.c` runs it as a **real-input FFT**: it packs the real signal into a half-size

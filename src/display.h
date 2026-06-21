@@ -26,87 +26,61 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   bargraph.c
+ * @file   display.h
  * @author Dennis Witzig
- * @date   2022-10-15
- * @brief  This module contains the code to interact with a bar graph display
- *         connected to a MAX7219 display driver.
+ * @date   2026-06-21
+ * @brief  This module is a small shadow framebuffer over the MAX7219 digit
+ *         registers. The segment and bargraph renderers stage digit values
+ *         here; a single display_flush() then pushes only the digits that
+ *         actually changed, coalescing a frame's updates into one atomic burst
+ *         and skipping registers whose contents are unchanged.
  */
+
+#ifndef DISPLAY_H_
+#define DISPLAY_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
-#include "display.h"
-#include "bargraph.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
+/**
+ * @brief Number of MAX7219 digit registers the framebuffer covers, mapped to
+ *        digit indices 0..DISPLAY_DIGITS-1 (MAX7219_DIGIT_0..DIGIT_4): digits
+ *        0/1 are the 7-segment characters, digits 2/3/4 drive the bargraph.
+ */
+#define DISPLAY_DIGITS 5
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
-/*                               PROTOTYPES                                  */
+/*                            GLOBAL VARIABLES                               */
 /*---------------------------------------------------------------------------*/
-static void bargraph_stage(void);
 
 /*---------------------------------------------------------------------------*/
-/*                            LOCAL VARIABLES                                */
-/*---------------------------------------------------------------------------*/
-static uint32_t bargraph_state = 0;
-
-/*---------------------------------------------------------------------------*/
-/*                        FUNCTION IMPLEMENTATION                            */
+/*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Stage the current bar graph state into the display framebuffer. The
- *        three packed digits become visible on the next display_flush().
+ * @brief Stage a digit value into the shadow framebuffer. Nothing is sent to
+ *        the MAX7219 until display_flush() is called.
+ * @param[in] digit Digit index 0..DISPLAY_DIGITS-1 (out-of-range is ignored).
+ * @param[in] value Raw segment byte for that digit register.
  */
-static void bargraph_stage(void)
-{
-    uint8_t data_dig_2, data_dig_3, data_dig_4;
-
-    data_dig_2 = (uint8_t)((bargraph_state & 0x000FE000) >> 13) | (uint8_t)((bargraph_state & 0x00001000) >> 5);
-    data_dig_3 = (uint8_t)((bargraph_state & 0x00000FE0) >> 5) | (uint8_t)((bargraph_state & 0x00000010) << 3);
-    data_dig_4 = (uint8_t)(bargraph_state & 0x0000000F) << 3;
-
-    display_set_digit(2, data_dig_2);
-    display_set_digit(3, data_dig_3);
-    display_set_digit(4, data_dig_4);
-}
+void display_set_digit(uint8_t digit, uint8_t value);
 
 /**
- * @brief Sets the bar graph to a given level bar starting from origin. Staged
- *        into the framebuffer; becomes visible on the next display_flush().
- * @param[in] level Level bar to display.
- * @param[in] origin Origin of the level bar.
+ * @brief Push every staged digit whose value differs from what the MAX7219 was
+ *        last given, then mark them as shipped. Digits that did not change cost
+ *        no bus traffic.
  */
-void bargraph_set_level(uint8_t level, uint8_t origin)
-{
-    uint32_t bit_mask;
-
-    if (level <= BARGRAPH_SIZE) {
-        bit_mask = (1UL << level) - 1UL;
-        if (origin == BARGRAPH_LEFT) {
-            bargraph_state = bit_mask;
-        } else {
-            bargraph_state = bit_mask << (BARGRAPH_SIZE - level);
-        }
-    }
-
-    bargraph_stage();
-}
-
-void bargraph_set_binary(uint32_t value)
-{
-    bargraph_state = value;
-
-    bargraph_stage();
-}
+void display_flush(void);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
+#endif /* DISPLAY_H_ */

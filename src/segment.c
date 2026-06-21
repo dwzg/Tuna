@@ -36,7 +36,7 @@ For more information, please refer to <http://unlicense.org/>
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
 #include <stdint.h>
-#include "max7219.h"
+#include "display.h"
 #include "segment.h"
 
 /*---------------------------------------------------------------------------*/
@@ -74,22 +74,13 @@ void segment_display_char(uint8_t digit, uint8_t alpha, uint8_t dotpoint)
 {
     uint8_t glyph;
 
-    if ('A' <= alpha && alpha <= 'Z') {
+    if (digit <= 1 && 'A' <= alpha && alpha <= 'Z') {
         glyph = FONT_ALPHA[alpha - 'A'];
         if (dotpoint) {
             glyph |= 0x80;
         }
 
-        switch (digit) {
-        case 0:
-            max7219_write(MAX7219_DIGIT_0_REGISTER, glyph);
-            break;
-        case 1:
-            max7219_write(MAX7219_DIGIT_1_REGISTER, glyph);
-            break;
-        default:
-            break;
-        }
+        display_set_digit(digit, glyph);
     }
 }
 
@@ -102,29 +93,20 @@ void segment_display_num_digit(uint8_t digit, uint8_t value, uint8_t dotpoint)
 {
     uint8_t glyph;
 
-    if (value <= 9) {
+    if (digit <= 1 && value <= 9) {
         glyph = FONT_NUM[value];
         if (dotpoint) {
             glyph |= 0x80;
         }
 
-        switch (digit) {
-        case 0:
-            max7219_write(MAX7219_DIGIT_0_REGISTER, glyph);
-            break;
-        case 1:
-            max7219_write(MAX7219_DIGIT_1_REGISTER, glyph);
-            break;
-        default:
-            break;
-        }
+        display_set_digit(digit, glyph);
     }
 }
 
 void segment_smile(void)
 {
-    max7219_write(MAX7219_DIGIT_0_REGISTER, SMILE[0]);
-    max7219_write(MAX7219_DIGIT_1_REGISTER, SMILE[1]);
+    display_set_digit(0, SMILE[0]);
+    display_set_digit(1, SMILE[1]);
 }
 
 /*---------------------------------------------------------------------------*/
