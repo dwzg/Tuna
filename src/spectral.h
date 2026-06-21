@@ -26,15 +26,15 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   analysis.h
+ * @file   spectral.h
  * @author Dennis Witzig
  * @date   2022-10-21
  * @brief  This module contains the code to analyze the audio spectrum and
  *         determine the main frequency or note of the signal.
  */
 
-#ifndef ANALYSIS_H_
-#define ANALYSIS_H_
+#ifndef SPECTRAL_H_
+#define SPECTRAL_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
@@ -63,9 +63,9 @@ For more information, please refer to <http://unlicense.org/>
  *                are overwritten (windowed, transformed, then magnitudes).
  * @return Frequency of the strongest spectral peak in Hz.
  */
-double analysis_fft_frequency(int16_t samples[]);
+double spectral_frequency(int16_t samples[]);
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
-#endif /* ANALYSIS_H_ */
+#endif /* SPECTRAL_H_ */
