@@ -50,31 +50,31 @@ At a glance, one frame of audio travels through the firmware like this:
 
 [source]
 ----
-  microphone
-      │  (AC-coupled, biased at VDD/2)
-      ▼
-  ADC0  ──(timer-paced, event-triggered)──►  result-ready ISR
-      │                                            │ re-centres to signed int16
-      ▼                                            ▼
-  acquisition.c  ── double-buffered int16_t[FRAME_SIZE] ──►  analysis buffer
+  microphone  (AC-coupled, biased at VDD/2)
       │
       ▼
-  signal_is_present()?  ── no ──►  blank display
+  ADC0 ──(timer-paced, hardware-triggered)──► result-ready ISR
+      │   (ISR re-centres each result to a signed int16)
+      ▼
+  acquisition.c  (double-buffered int16_t[FRAME_SIZE])
+      │
+      ▼
+  signal_is_present()? ──no──► blank display
       │ yes
       ▼
-  pitch estimator (YIN  or  FFT)  ──►  raw frequency (Hz)
+  pitch estimator (YIN or FFT) ──► raw frequency (Hz)
       │
       ▼
-  smooth_frequency()  ──►  stabilised frequency (Hz)
+  smooth_frequency() ──► stabilised frequency (Hz)
       │
       ▼
-  pitch_from_frequency()  ──►  { note, octave, cents }
+  pitch_from_frequency() ──► { note, octave, cents }
       │
       ▼
-  segment.c / bargraph.c  ── stage ──►  display.c shadow framebuffer
+  segment.c / bargraph.c ──stage──► display.c (shadow framebuffer)
       │
       ▼
-  display_flush()  ── changed digits only ──►  max7219.c  ──►  MAX7219 ──► LEDs
+  display_flush() ──changed digits──► max7219.c ──► MAX7219 ──► LEDs
 ----
 
 Each stage is described in detail in the chapters that follow.

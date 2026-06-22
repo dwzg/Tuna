@@ -103,15 +103,18 @@ Configure fails fast if the supplied pack does not contain `gcc/dev/avr64dd14`.
 ==== Compiler/linker flags
 
 The firmware is built size-optimised with link-time optimisation and section
-garbage collection:
+garbage collection. Both the compile and link steps also carry the MCU flags
+`-mmcu=avr64dd14 -B <dfp>/gcc/dev/avr64dd14` (shown as `${MCU_FLAGS}` below),
+which select the device and its runtime from the AVR-Dx Device Family Pack:
 
-* compile: `-Os -flto -ffunction-sections -fdata-sections -funsigned-char
-  -funsigned-bitfields -Wall -Wextra`
-* link: `-Os -flto -Wl,--gc-sections -Wl,--relax -Wl,-Map=Tuna.map`
+* compile: `${MCU_FLAGS} -Os -flto -ffunction-sections -fdata-sections
+  -funsigned-char -funsigned-bitfields -Wall -Wextra`
+* link: `${MCU_FLAGS} -Os -flto -Wl,--gc-sections -Wl,--relax -Wl,-Map=Tuna.map`
 
+The `.elf` is then linked against `libm` (`target_link_libraries(... m)`).
 `-funsigned-char` matters: the font/coefficient tables and ADC handling assume an
-unsigned plain `char`. The math library (`libm`) is linked because `spectral.c`
-and `pitch.c` use `log()`.
+unsigned plain `char`. `libm` is required because `spectral.c` and `pitch.c` use
+`log()`.
 
 [NOTE]
 ====
