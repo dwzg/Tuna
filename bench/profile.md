@@ -12,15 +12,15 @@ simavr on `atmega1284p` (classic AVRe+ core -- relative breakdown, not absolute 
 | parabolic interp       |   1328 |       0.0% |
 | return + tail          |    552 |       0.0% |
 
-### FFT path  (total 4086638 cycles)
+### FFT path  (total 3816031 cycles)
 
 | stage | cycles | % of total |
 |-------|-------:|-----------:|
-| DC removal             |  38496 |       0.9% |
-| windowing              | 174080 |       4.3% |
+| DC removal             |  38496 |       1.0% |
+| windowing              | 174080 |       4.6% |
 | real-input pack        |  18446 |       0.5% |
-| FFT transform          | 2758554 |      67.5% |
-| magnitude split        | 1077871 |      26.4% |
+| FFT transform          | 2758554 |      72.3% |
+| magnitude split        | 807264 |      21.2% |
 | peak pick              |   7678 |       0.2% |
 | octave correct         |   2649 |       0.1% |
 | parabolic interp       |   8046 |       0.2% |

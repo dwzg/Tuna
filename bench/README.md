@@ -128,10 +128,19 @@ cd bench && ./profile_stages.sh   # writes profile.md
 ```
 
 Reference run (`-Os -flto`): **YIN is ~100% the difference+CMND loop**, so the
-only lever is its work — see the sweep below. **FFT is 67% the transform and 26%
-the magnitude split** (≈94% together); the windowing is ~4% and the entire
-floating-point tail (peak-pick `log()`, interpolation) is ~0.2%, which is why
-fast-math on the tail is not worth pursuing.
+only lever is its work — see the sweep below. For **FFT the transform dominates
+(~72%)** followed by the magnitude split (~21%); the windowing is ~4% and the
+entire floating-point tail (peak-pick `log()`, interpolation) is ~0.2%, which is
+why fast-math on the tail is not worth pursuing.
+
+The profiler also drove a magnitude-split optimization. That stage was first
+~26% of the FFT path, but the profile showed only ~25% of *it* was the square
+root — the rest is the real-FFT split/twiddle arithmetic. Replacing the exact
+`isqrt` with the alpha-max-plus-beta-min magnitude approximation
+(`max(|re|,|im|) + min(|re|,|im|)/2`, in `src/spectral.c`) cut the whole FFT
+path by ~6.6% with no measurable accuracy change (Hanning mean 0.27 → 0.28
+cents, zero gross misses, `test_fft` still passes), since peak-pick, octave
+correction and the log-parabola use only relative bin heights.
 
 ## Parameter sweep (accuracy vs. cost)
 
