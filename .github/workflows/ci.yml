@@ -111,3 +111,60 @@ jobs:
 
       - name: Check for regressions
         run: ./bench/check_regression.py
+
+  # ---------------------------------------------------------------------------
+  # After a merge to develop, refresh bench/baseline.json to the new reality and
+  # commit it back, so the gate above always measures pull requests against the
+  # current tip of develop. The metrics are deterministic, so the baseline only
+  # changes (and a commit is only made) when a merge actually moved flash, RAM
+  # or DSP cycles -- or when the runner's avr-gcc version changed. Commits made
+  # with GITHUB_TOKEN do not retrigger workflows, so this cannot loop; the
+  # [skip ci] marker is belt-and-suspenders.
+  #
+  # NOTE: requires develop to accept direct pushes from Actions. If develop is a
+  # protected branch that forbids them, drop this job and bump the baseline in
+  # the PR instead (cd bench && ./check_regression.py --update).
+  # ---------------------------------------------------------------------------
+  update-baseline:
+    name: Refresh benchmark baseline
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: benchmark
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Install AVR toolchain + simavr
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-avr avr-libc binutils-avr simavr libsimavr-dev
+
+      - name: Cache AVR-Dx device pack
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: avr-dfp-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Fetch device pack
+        run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/avr-toolchain.cmake
+
+      - name: Regenerate baseline
+        run: ./bench/check_regression.py --update
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- bench/baseline.json; then
+            echo "Baseline unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bench/baseline.json
+          git commit -m "ci: refresh benchmark baseline [skip ci]"
+          # Re-sync in case another commit landed on develop while this ran.
+          git pull --rebase origin develop
+          git push origin HEAD:develop

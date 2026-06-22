@@ -78,17 +78,38 @@ cd bench
 
 ### Updating the baseline
 
-`baseline.json` is toolchain-specific. Regenerate it after an intentional
-flash/RAM/cycle change, or after an avr-gcc bump on the CI runner:
+`baseline.json` is toolchain-specific. It is refreshed two ways:
 
-```sh
-cd bench
-./check_regression.py --update   # rewrites baseline.json from a fresh run
-git add baseline.json && git commit -m "bench: re-baseline"
-```
+- **Automatically on merge to `develop`.** The `update-baseline` job in
+  `ci.yml` re-runs `--update` after each push to `develop` and commits the
+  result back. Because the metrics are deterministic, it only commits when a
+  merge actually moved flash/RAM/cycles (or the runner's avr-gcc changed), so
+  the baseline always tracks the tip of `develop` and pull requests are gated
+  against current reality. (The commit uses `GITHUB_TOKEN`, which does not
+  retrigger workflows, so it cannot loop.)
+- **Manually**, for an *intended* regression in a PR. A required, failing gate
+  blocks the merge, so if a change deliberately grows the firmware or the DSP,
+  bump the baseline in the same PR:
+
+  ```sh
+  cd bench
+  ./check_regression.py --update   # rewrites baseline.json from a fresh run
+  git add baseline.json && git commit -m "bench: re-baseline"
+  ```
 
 The committed baseline was captured with avr-gcc 7.3.0 — the version `apt`
 installs on `ubuntu-latest`, so it matches the CI runner.
+
+> **Trade-off of auto-refresh:** because the baseline follows `develop`, the
+> gate catches any *single* change that regresses past tolerance, but not slow
+> drift accumulated one sub-tolerance step at a time across many merges. The
+> absolute flash/RAM ceilings are the backstop against that. If you'd rather
+> catch cumulative drift, pin the baseline (remove the `update-baseline` job)
+> and bump it deliberately.
+
+> **Branch protection:** the auto-refresh pushes directly to `develop`. If
+> `develop` forbids pushes from Actions, drop the `update-baseline` job and rely
+> on the manual in-PR bump above.
 
 ## Files
 
