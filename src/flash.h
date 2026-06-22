@@ -26,56 +26,42 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 /**
- * @file   fft.h
- * @author Dennis Witzig
- * @date   2022-09-29
- * @brief  This module contains the header for the FFT implementation.
+ * @file   flash.h
+ * @brief  Portable qualifier for keeping read-only tables in program flash.
  */
 
-#ifndef FFT_H_
-#define FFT_H_
+#ifndef FLASH_H_
+#define FLASH_H_
 
 /*---------------------------------------------------------------------------*/
 /*                               INCLUDES                                    */
 /*---------------------------------------------------------------------------*/
-#include <stdint.h>
-#include "flash.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
 /*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*                         TYPEDEFS AND STRUCTURES                           */
-/*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*                            GLOBAL VARIABLES                               */
-/*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*                           FUNCTION PROTOTYPES                             */
-/*---------------------------------------------------------------------------*/
 /**
- * @brief In-place forward/inverse complex fast Fourier transform.
+ * @brief Place a read-only table in program memory instead of RAM.
+ *
+ * AVR is a Harvard machine: a plain @c const array is shadowed into RAM at
+ * startup (the linker keeps a flash copy and the C runtime copies it down),
+ * so a large constant lookup table costs both flash and the same amount of
+ * scarce SRAM. avr-gcc's @c __flash named address space keeps the table in
+ * flash and still permits ordinary indexed reads (the compiler emits @c LPM),
+ * reclaiming the RAM. It is an avr-gcc extension, so on the host regression
+ * build (`test/`) it expands to nothing and the table is an ordinary @c const.
+ *
+ * Only valid for tables read by plain indexing; do not take a generic pointer
+ * to a @c FLASH_RODATA object (the address spaces do not mix).
  */
-int16_t fft(int16_t fr[], int16_t fi[], int16_t m, uint8_t inverse);
-
-/**
- * @brief Fixed-point Q15 multiply with rounding (exposed for the real-FFT
- *        split step in spectral.c).
- */
-int16_t fix_mpy(int16_t a, int16_t b);
-
-/**
- * @brief Quarter-wave-plus sine table, SINEWAVE[i] = sin(2*pi*i/FRAME_SIZE) in
- *        Q15. Holds 3/4 of a period (indices 0 .. 3*FRAME_SIZE/4 - 1); cosine is
- *        read as SINEWAVE[i + FRAME_SIZE/4]. Shared by fft() and the real-FFT
- *        twiddle factors.
- */
-extern const FLASH_RODATA int16_t SINEWAVE[];
+#if defined(__AVR__)
+#define FLASH_RODATA __flash
+#else
+#define FLASH_RODATA
+#endif
 
 /*---------------------------------------------------------------------------*/
 /*                                  EOF                                      */
 /*---------------------------------------------------------------------------*/
-#endif /* FFT_H_ */
+
+#endif /* FLASH_H_ */

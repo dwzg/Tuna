@@ -38,6 +38,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include "config.h"
 #include "window.h"
+#include "flash.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
@@ -56,7 +57,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 #if WINDOW_FUNCTION == WINDOW_DIRICHLET
 
-const int16_t WINDOW[FRAME_SIZE / 2] = {
+const FLASH_RODATA int16_t WINDOW[FRAME_SIZE / 2] = {
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
     32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767,
@@ -125,7 +126,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
 
 #elif WINDOW_FUNCTION == WINDOW_HANNING
 
-const int16_t WINDOW[FRAME_SIZE / 2] = {
+const FLASH_RODATA int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     1,     3,     5,     8,    11,    15,
        20,    25,    31,    37,    44,    52,    61,    69,
        79,    89,   100,   111,   123,   136,   149,   163,
@@ -194,7 +195,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
 
 #elif WINDOW_FUNCTION == WINDOW_HAMMING
 
-const int16_t WINDOW[FRAME_SIZE / 2] = {
+const FLASH_RODATA int16_t WINDOW[FRAME_SIZE / 2] = {
      2621,  2622,  2622,  2624,  2626,  2628,  2632,  2635,
      2640,  2644,  2650,  2656,  2662,  2669,  2677,  2685,
      2694,  2703,  2713,  2724,  2735,  2747,  2759,  2772,
@@ -263,7 +264,7 @@ const int16_t WINDOW[FRAME_SIZE / 2] = {
 
 #elif WINDOW_FUNCTION == WINDOW_BLACKMAN
 
-const int16_t WINDOW[FRAME_SIZE / 2] = {
+const FLASH_RODATA int16_t WINDOW[FRAME_SIZE / 2] = {
         0,     0,     0,     1,     2,     3,     4,     5,
         7,     9,    11,    13,    16,    19,    22,    25,
        29,    32,    36,    40,    45,    49,    54,    59,
