@@ -45,6 +45,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <math.h>
 #include "window.h"
 #include "fft.h"
+#include "profile.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
@@ -85,6 +86,8 @@ double spectral_frequency(int16_t samples[])
     double freq_bin = (double)SAMPLE_FREQ / (double)FRAME_SIZE;
     double delta = 0.0;
 
+    PROFILE_MARK(1);    /* stage boundaries for bench/profile_stages.sh */
+
     /*
      * Remove the DC component before windowing. The AC-coupled input is biased
      * at VDD/2 and re-centred by a fixed offset, so a small residual bias can
@@ -97,9 +100,11 @@ double spectral_frequency(int16_t samples[])
     for (i = 0; i < FRAME_SIZE; ++i) {
         samples[i] = (int16_t)((int32_t)samples[i] - mean);
     }
+    PROFILE_MARK(2);    /* DC removal done */
 
     /* Reduce spectral leakage before transforming. */
     window_apply_window(samples);
+    PROFILE_MARK(3);    /* windowing done */
 
     /*
      * Real-input FFT. The real signal is packed into a half-size complex
@@ -119,8 +124,10 @@ double spectral_frequency(int16_t samples[])
     for (i = 0; i < SPECTRUM_BINS; ++i) {
         samples[i] = samples[2 * i];
     }
+    PROFILE_MARK(4);    /* real-input pack done */
 
     fft(samples, fft_scratch, LOG2_FRAME_SIZE - 1, 0);
+    PROFILE_MARK(5);    /* FFT transform done */
 
     /*
      * Split the N/2-point spectrum Z (real in samples[], imaginary in
@@ -148,6 +155,7 @@ double spectral_frequency(int16_t samples[])
         samples[0] = dc_mag;
         samples[SPECTRUM_BINS] = nyquist_mag;
     }
+    PROFILE_MARK(6);    /* magnitude split done */
 
     /* Strongest (and best frequency-resolved) bin, skipping DC (bin 0). */
     max = samples[1];
@@ -158,12 +166,14 @@ double spectral_frequency(int16_t samples[])
             max_index = i;
         }
     }
+    PROFILE_MARK(7);    /* peak pick done */
 
     /*
      * Octave correction: the strongest bin is frequently a harmonic rather than
      * the fundamental, so resolve which sub-multiple of it the fundamental is.
      */
     harmonic_number = fundamental_divisor(samples, max_index, max);
+    PROFILE_MARK(8);    /* octave correction done */
 
     /*
      * Parabolic interpolation in bin space for sub-bin frequency resolution.
@@ -182,6 +192,8 @@ double spectral_frequency(int16_t samples[])
             delta = 0.5 * (y0 - y2) / denom;
         }
     }
+
+    PROFILE_MARK(9);    /* parabolic interpolation done */
 
     return ((double)max_index + delta) * freq_bin / (double)harmonic_number;
 }
