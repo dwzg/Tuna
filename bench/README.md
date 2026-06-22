@@ -63,9 +63,13 @@ them to `baseline.json`, applying two independent checks:
   when the runner's avr-gcc version differs from the one recorded in
   `baseline.json`, because the numbers legitimately shift with the toolchain —
   re-baseline instead (see below).
-- **Absolute ceiling** — flash ≤ 64 KB, RAM ≤ 8 KB (the avr64dd14's limits).
-  Toolchain-independent, so it is **always** enforced. The FFT path already sits
-  at ~95% of SRAM, so this is a live guard.
+- **Absolute ceiling** — flash ≤ 64 KB, and static RAM ≤ SRAM minus a stack
+  reserve (6656 B = 8 KB − 1.5 KB; the call stack and the sample-counter ISR
+  need the rest, so the full 8 KB is the wrong limit). Toolchain-independent, so
+  it is **always** enforced. This is the guard that catches a constant lookup
+  table accidentally landing in RAM instead of flash — the FFT path once reached
+  7777 B (95% of SRAM, ~400 B of stack) that way before `SINEWAVE`/`WINDOW` were
+  moved to flash with `FLASH_RODATA` (`src/flash.h`).
 
 It exits non-zero on any enforced failure, writes a table to the GitHub step
 summary, and runs as the `benchmark` job in `.github/workflows/ci.yml`.
@@ -138,6 +142,8 @@ trends. See `results.md` for the full table.
    unrolling/inlining hurts on a small core with a tiny I-cache-less pipeline.
 4. **FFT is the cheaper compute path, despite YIN being the default.** Across
    every config the FFT pitch path runs in fewer DSP cycles than YIN (its
-   `O(N log N)` beats YIN's `O(N²)` difference function at `FRAME_SIZE=1024`),
-   at the cost of more flash and RAM (it pulls in `fft.c`, `window.c` and
-   `log()`). If analysis latency ever becomes the constraint, FFT is the lever.
+   `O(N log N)` beats YIN's `O(N²)` difference function at `FRAME_SIZE=1024`), at
+   the cost of more flash (it pulls in `fft.c`, `window.c` and `log()`). Static
+   RAM now matches the YIN path (5217 B) since the `SINEWAVE` and `WINDOW` tables
+   live in flash; before that the FFT path used 7777 B and left only ~400 B of
+   stack. If analysis latency ever becomes the constraint, FFT is the lever.
