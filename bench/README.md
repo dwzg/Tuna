@@ -51,13 +51,54 @@ cd bench
 Needs `avr-gcc`, `avr-size`, `libsimavr` (Fedora: `simavr simavr-devel`;
 Debian/Ubuntu: `simavr libsimavr-dev`), and an extracted AVR-Dx DFP.
 
+## Regression detection (CI)
+
+`check_regression.py` is the CI gate. It builds the **shipped** config
+(`-Os -flto`) for both pitch methods, measures flash/RAM/cycles, and compares
+them to `baseline.json`, applying two independent checks:
+
+- **Relative regression** — each metric must stay within the baseline's
+  tolerances (default flash/RAM 2%, cycles 5%). Catches "this change made the
+  firmware bigger or the DSP slower." These checks are **skipped with a warning**
+  when the runner's avr-gcc version differs from the one recorded in
+  `baseline.json`, because the numbers legitimately shift with the toolchain —
+  re-baseline instead (see below).
+- **Absolute ceiling** — flash ≤ 64 KB, RAM ≤ 8 KB (the avr64dd14's limits).
+  Toolchain-independent, so it is **always** enforced. The FFT path already sits
+  at ~95% of SRAM, so this is a live guard.
+
+It exits non-zero on any enforced failure, writes a table to the GitHub step
+summary, and runs as the `benchmark` job in `.github/workflows/ci.yml`.
+
+```sh
+cd bench
+./check_regression.py            # gate the shipped config (what CI runs)
+./check_regression.py --no-run   # reuse the last out/results.tsv
+```
+
+### Updating the baseline
+
+`baseline.json` is toolchain-specific. Regenerate it after an intentional
+flash/RAM/cycle change, or after an avr-gcc bump on the CI runner:
+
+```sh
+cd bench
+./check_regression.py --update   # rewrites baseline.json from a fresh run
+git add baseline.json && git commit -m "bench: re-baseline"
+```
+
+The committed baseline was captured with avr-gcc 7.3.0 — the version `apt`
+installs on `ubuntu-latest`, so it matches the CI runner.
+
 ## Files
 
-- `run_bench.sh` — driver; sweeps the configs and writes `results.md`.
+- `run_bench.sh` — driver; sweeps the configs, writes `results.md` (full run) and `out/results.tsv` (machine-readable). `--configs`/`--methods` restrict the sweep.
+- `check_regression.py` — CI gate: compares the shipped config to `baseline.json` (tolerances + chip ceilings). `--update` rewrites the baseline.
+- `baseline.json` — committed reference numbers + tolerances + ceilings.
 - `bench_dsp.c` — AVR firmware harness: one pitch pass, bracketed by `GPIOR0` markers.
 - `simrun.c` — host program: runs a harness image under simavr, prints the bracketed cycle count.
 - `gen_frame.py` → `bench_frame.h` — the fixed 220 Hz (A3) input frame, embedded so every build sees identical data.
-- `results.md` — generated table (committed as the reference run).
+- `results.md` — generated full-sweep table (committed as the reference run).
 
 ## Key findings (reference run: avr-gcc 7.3.0)
 

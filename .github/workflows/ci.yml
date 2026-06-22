@@ -77,3 +77,37 @@ jobs:
             build/Tuna.elf
             build/Tuna.map
           if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Flash / RAM / DSP-cycle regression gate. Builds the shipped optimization
+  # config (-Os -flto) for both pitch methods, measures firmware size on the
+  # real avr64dd14 and DSP cycles under simavr, and fails if any metric drifts
+  # past bench/baseline.json's tolerances or the chip's flash/RAM ceilings.
+  # See bench/README.md (cycles are a classic-core proxy; size is exact).
+  # ---------------------------------------------------------------------------
+  benchmark:
+    name: Benchmark regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AVR toolchain + simavr
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-avr avr-libc binutils-avr simavr libsimavr-dev
+
+      # Same key as the firmware job so the device pack is fetched at most once.
+      - name: Cache AVR-Dx device pack
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: avr-dfp-${{ hashFiles('CMakeLists.txt') }}
+
+      # Configure-only: triggers FetchContent so build/_deps/avr_dfp-src exists
+      # (run_bench.sh reads the device pack from there).
+      - name: Fetch device pack
+        run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/avr-toolchain.cmake
+
+      - name: Check for regressions
+        run: ./bench/check_regression.py
