@@ -12,9 +12,10 @@ each metric to bench/baseline.json. Two independent checks:
     avr-gcc version differs from the baseline's, because the numbers then shift
     for reasons unrelated to the source change -- re-baseline instead.
 
-  * Absolute ceiling -- flash <= 64 KB, RAM <= 8 KB (the avr64dd14's limits).
-    Toolchain-independent, so it is always enforced. The FFT path already uses
-    ~95% of SRAM, so this is a real guard, not a formality.
+  * Absolute ceiling -- flash <= 64 KB, and static RAM <= SRAM minus a stack
+    reserve (not the full 8 KB; the call stack and ISR frames need the rest).
+    Toolchain-independent, so it is always enforced. This is what catches a
+    constant table accidentally landing in RAM instead of flash.
 
 Exit status is non-zero if any enforced check fails, so CI can gate on it.
 
@@ -33,6 +34,16 @@ TSV = os.path.join(HERE, "out", "results.tsv")
 DEFAULT_BASELINE = os.path.join(HERE, "baseline.json")
 METRICS = ("flash", "ram", "cycles")
 BUDGET_CYCLES = 6_000_000   # 250 ms @ 24 MHz; informational for cycle reporting
+
+# Absolute ceilings (toolchain-independent). The RAM ceiling is the SRAM size
+# minus a stack reserve, NOT the full 8 KB: static data must leave room for the
+# call stack and the sample-counter ISR frames. With ~1.5 KB reserved the FFT
+# path (5217 B static) keeps ~1.4 KB of headroom. A constant table that lands in
+# RAM instead of flash (plain `const` without FLASH_RODATA) is exactly what this
+# guards against -- it is how the FFT path once reached 7777 B / 95% of SRAM.
+SRAM_BYTES = 8192
+STACK_RESERVE = 1536
+DEFAULT_CEILINGS = {"flash": 65536, "ram": SRAM_BYTES - STACK_RESERVE}
 
 
 def avr_gcc_version():
@@ -104,7 +115,7 @@ def main():
                         "Regenerate with: ./check_regression.py --update "
                         "(required after an avr-gcc version bump).",
             "toolchain": toolchain,
-            "ceilings": prev.get("ceilings", {"flash": 65536, "ram": 8192}),
+            "ceilings": prev.get("ceilings", DEFAULT_CEILINGS),
             "tolerances": prev.get("tolerances",
                                    {"flash": 0.02, "ram": 0.02, "cycles": 0.05}),
             "configs": cur,
@@ -122,7 +133,7 @@ def main():
     with open(args.baseline) as f:
         base = json.load(f)
 
-    ceilings = base.get("ceilings", {"flash": 65536, "ram": 8192})
+    ceilings = base.get("ceilings", DEFAULT_CEILINGS)
     tol = base.get("tolerances", {"flash": 0.02, "ram": 0.02, "cycles": 0.05})
     base_cfg = base.get("configs", {})
     base_tc = base.get("toolchain", "unknown")

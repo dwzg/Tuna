@@ -3,7 +3,7 @@
   "toolchain": "7.3.0",
   "ceilings": {
     "flash": 65536,
-    "ram": 8192
+    "ram": 6656
   },
   "tolerances": {
     "flash": 0.02,
@@ -17,9 +17,9 @@
       "cycles": 8978951
     },
     "FFT/Os+lto": {
-      "flash": 9522,
-      "ram": 7777,
-      "cycles": 4094975
+      "flash": 9514,
+      "ram": 5217,
+      "cycles": 4086622
     }
   }
 }
