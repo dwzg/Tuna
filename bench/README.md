@@ -115,15 +115,59 @@ installs on `ubuntu-latest`, so it matches the CI runner.
 > `develop` forbids pushes from Actions, drop the `update-baseline` job and rely
 > on the manual in-PR bump above.
 
+## Per-stage profiling
+
+`profile_stages.sh` breaks each pitch path into its DSP stages and reports the
+cycles spent in each. It builds `bench_profile.c` with `-DTUNA_PROFILE`, which
+activates the `PROFILE_MARK()` markers in `src/yin.c` / `src/spectral.c` (the
+markers expand to nothing in every normal build, so production firmware is
+byte-for-byte unchanged), and `simprof` reads the cycle counter at each marker.
+
+```sh
+cd bench && ./profile_stages.sh   # writes profile.md
+```
+
+Reference run (`-Os -flto`): **YIN is ~100% the difference+CMND loop**, so the
+only lever is its work — see the sweep below. **FFT is 67% the transform and 26%
+the magnitude split** (≈94% together); the windowing is ~4% and the entire
+floating-point tail (peak-pick `log()`, interpolation) is ~0.2%, which is why
+fast-math on the tail is not worth pursuing.
+
+## Parameter sweep (accuracy vs. cost)
+
+`sweep.sh` answers "how far can the YIN knobs be cut before accuracy suffers?".
+Since the profile shows YIN's cost is entirely `O(YIN_W * YIN_TAU_MAX)`, it
+sweeps those two (now build-overridable in `src/yin.c`) and pairs, for each
+setting, the **pitch error in cents** over a 30–1000 Hz synthetic corpus
+(`sweep_yin.c`, host) with the **DSP cycles** under simavr.
+
+```sh
+cd bench && ./sweep.sh            # writes sweep.md
+```
+
+Reference run finding: the shipped `YIN_TAU_MAX=256 / YIN_W=512` is ~2× more
+expensive than it needs to be. Dropping `YIN_TAU_MAX` to 160 is *free* (identical
+gross-miss count and ~2 cent median, but 150% → 93% of the frame budget; the
+25.6 Hz floor is still below the lowest bass string), and `YIN_W` 512 → 256 is
+nearly free (median 2.2 → 3.9 cents, 150% → 77%). Combining them puts YIN around
+half the frame budget with negligible accuracy change. (The p95 column stays
+~1200 cents throughout because the corpus includes deliberately hard
+weak-fundamental tones that octave-error regardless of the knobs — read the
+median and gross-miss columns for the knob effect.)
+
 ## Files
 
-- `run_bench.sh` — driver; sweeps the configs, writes `results.md` (full run) and `out/results.tsv` (machine-readable). `--configs`/`--methods` restrict the sweep.
+- `run_bench.sh` — optimization-level sweep; writes `results.md` and `out/results.tsv`. `--configs`/`--methods` restrict it.
 - `check_regression.py` — CI gate: compares the shipped config to `baseline.json` (tolerances + chip ceilings). `--update` rewrites the baseline.
 - `baseline.json` — committed reference numbers + tolerances + ceilings.
 - `bench_dsp.c` — AVR firmware harness: one pitch pass, bracketed by `GPIOR0` markers.
 - `simrun.c` — host program: runs a harness image under simavr, prints the bracketed cycle count.
+- `profile_stages.sh` — per-stage cycle profiler; writes `profile.md`.
+- `bench_profile.c` / `simprof.c` — profiling harness and runner (read every `PROFILE_MARK()` transition).
+- `sweep.sh` — YIN accuracy-vs-cost sweep; writes `sweep.md`.
+- `sweep_yin.c` — host accuracy probe for the sweep (cents error over a tone corpus).
 - `gen_frame.py` → `bench_frame.h` — the fixed 220 Hz (A3) input frame, embedded so every build sees identical data.
-- `results.md` — generated full-sweep table (committed as the reference run).
+- `results.md` / `profile.md` / `sweep.md` — generated tables, committed as reference runs.
 
 ## Key findings (reference run: avr-gcc 7.3.0)
 
