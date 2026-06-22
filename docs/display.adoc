@@ -7,9 +7,14 @@ changes through the driver (`max7219`) over the bit-banged HAL pins.
 
 [source]
 ----
-segment.c ─┐
-           ├─ display_set_digit() ─► display.c (shadow[]) ─ display_flush() ─► max7219_write() ─► HAL pins ─► MAX7219
-bargraph.c ─┘                                    (diff vs shipped[])
+  segment.c  ──┐
+               ├──► display_set_digit() ──► display.c shadow[] ──┐
+  bargraph.c ──┘                                                 │
+                                                                 ▼
+  display_flush()  (diff shadow[] vs shipped[], send only changes)
+                                                                 │
+                                                                 ▼
+  max7219_write() ──► HAL pins (PC1/PC2/PC3, bit-banged) ──► MAX7219
 ----
 
 === Shadow framebuffer (display.c)

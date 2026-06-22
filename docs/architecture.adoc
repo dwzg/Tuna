@@ -32,11 +32,16 @@ static state variable:
 
 [source]
 ----
-   ┌──────┐   ┌─────────────┐   ┌──────────┐   ┌─────────┐
-   │ INIT │──►│ ACQUISITION │──►│ ANALYSIS │──►│ DISPLAY │──┐
-   └──────┘   └─────────────┘   └──────────┘   └─────────┘  │
-                    ▲                                        │
-                    └────────────────────────────────────────┘
+        ┌──────┐
+        │ INIT │
+        └───┬──┘
+            │ (once, at startup)
+            ▼
+   ┌─────────────┐     ┌──────────┐     ┌─────────┐
+   │ ACQUISITION │ ──► │ ANALYSIS │ ──► │ DISPLAY │
+   └──────┬──────┘     └──────────┘     └────┬────┘
+          ▲                                  │
+          └──────────────────────────────────┘
 
    ERROR ── defensive halt trap (unreachable in correct operation)
 ----
@@ -82,12 +87,12 @@ stalling them.
 
 [source]
 ----
-time ──►
- buffer A:  [ fill ][ analyse+display ][ fill ][ analyse+display ] ...
- buffer B:         [ fill ][ analyse+display ][ fill ] ...
-            ▲      ▲
-            │      └─ A handed to analysis; B starts filling
-            └─ A starts filling (acquisition_prime)
+  time ──►
+   buffer A:  [ fill ][ analyse + display ][ fill ][ analyse + display ]
+   buffer B:          [ fill ][ analyse + display ][ fill ]
+              │       │
+              │       └─ A handed to analysis; B starts filling
+              └─ A starts filling (acquisition_prime)
 ----
 
 How a fill works:

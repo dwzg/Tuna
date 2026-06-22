@@ -159,14 +159,14 @@ C (host-testable).
 
 [source]
 ----
-main ─► control ─► acquisition ─► hal ─► (AVR peripherals)
-            │
-            ├─► yin / spectral ─► (config)         ┐
-            │        └─ spectral ─► window, fft     │ DSP
-            ├─► smoothing                           │ (no AVR deps,
-            ├─► pitch                               ┘  host-tested)
-            │
-            └─► segment / bargraph ─► display ─► max7219 ─► hal
+  main ──► control ──┬──► acquisition ──► hal ──► (AVR peripherals)
+                     │
+                     ├──► yin / spectral ──► config        ┐
+                     │         spectral ──► window, fft     │
+                     ├──► smoothing                         ├─ DSP (no AVR deps,
+                     ├──► pitch                             │      host-tested)
+                     │                                      ┘
+                     └──► segment / bargraph ──► display ──► max7219 ──► hal
 ----
 
 `config.h` is included nearly everywhere as the single source of tunables. Only
