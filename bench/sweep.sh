@@ -73,21 +73,21 @@ SAMPLE_FREQ_VAL="$(awk '/define +SAMPLE_FREQ/{gsub(/[^0-9]/,"",$3); print $3}' "
     printf '| tau_max | YIN_W | floor Hz | cycles | %% budget | median\|c\| | p95\|c\| | gross | lowest ok Hz |\n'
     printf '|--------:|------:|---------:|-------:|---------:|--------:|------:|------:|-------------:|\n'
     for tau in 96 128 160 192 256 320; do
-        m=""; [ "$tau" = 256 ] && m=" *"
+        m=""; [ "$tau" = 160 ] && m=" *"
         row "$tau" 512 "$m"
     done
     echo
-    echo "## Vary YIN_W (YIN_TAU_MAX = 256, the default)"
+    echo "## Vary YIN_W (YIN_TAU_MAX = 160, the default)"
     echo
     printf '| tau_max | YIN_W | floor Hz | cycles | %% budget | median\|c\| | p95\|c\| | gross | lowest ok Hz |\n'
     printf '|--------:|------:|---------:|-------:|---------:|--------:|------:|------:|-------------:|\n'
     for w in 256 384 512; do
-        m=""; [ "$w" = 512 ] && m=" (def)"
-        row 256 "$w" ""
+        m=""; [ "$w" = 512 ] && m=" *"
+        row 160 "$w" "$m"
     done
     echo
-    echo "_\`*\` and the W=512/tau=256 row are the shipped defaults. \"lowest ok Hz\""
-    echo "is the lowest swept tone still within 50 cents._"
+    echo "_\`*\` marks the shipped defaults (YIN_TAU_MAX=160, YIN_W=512). \"lowest"
+    echo "ok Hz\" is the lowest swept tone still within 50 cents._"
 } | tee "$RESULTS"
 
 echo

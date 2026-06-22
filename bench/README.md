@@ -145,15 +145,16 @@ setting, the **pitch error in cents** over a 30–1000 Hz synthetic corpus
 cd bench && ./sweep.sh            # writes sweep.md
 ```
 
-Reference run finding: the shipped `YIN_TAU_MAX=256 / YIN_W=512` is ~2× more
-expensive than it needs to be. Dropping `YIN_TAU_MAX` to 160 is *free* (identical
-gross-miss count and ~2 cent median, but 150% → 93% of the frame budget; the
-25.6 Hz floor is still below the lowest bass string), and `YIN_W` 512 → 256 is
-nearly free (median 2.2 → 3.9 cents, 150% → 77%). Combining them puts YIN around
-half the frame budget with negligible accuracy change. (The p95 column stays
-~1200 cents throughout because the corpus includes deliberately hard
-weak-fundamental tones that octave-error regardless of the knobs — read the
-median and gross-miss columns for the knob effect.)
+This sweep showed the original `YIN_TAU_MAX=256` was ~1.6× more expensive than
+needed, so **`YIN_TAU_MAX` is now 160** (`src/yin.c`): identical accuracy to 256
+(same gross-miss count, ~2 cent median) but 150% → 93% of the frame budget, with
+the 25.6 Hz floor still below the lowest bass string — the first setting that
+fits YIN under the per-frame budget. `YIN_W` is left at 512: dropping it to 256
+would roughly halve the cost again (93% → 48%) but does move the median (2.2 →
+3.9 cents), so it is a real, if small, accuracy trade rather than a free win and
+was not applied. (The p95 column stays ~1200 cents throughout because the corpus
+includes deliberately hard weak-fundamental tones that octave-error regardless
+of the knobs — read the median and gross-miss columns for the knob effect.)
 
 ## Files
 

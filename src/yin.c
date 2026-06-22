@@ -59,15 +59,18 @@ For more information, please refer to <http://unlicense.org/>
 
 /**
  * @brief Maximum lag. Sets the lowest detectable frequency = SAMPLE_FREQ / YIN_TAU_MAX.
- *        With SAMPLE_FREQ=4096 this is 16 Hz, still well below the lowest bass
- *        string (a 5-string low B is ~31 Hz), so the extra range up to 8 Hz that
- *        a larger lag would buy is unused. The difference-function cost is
- *        O(YIN_W * YIN_TAU_MAX), so halving the lag halves the dominant loop.
- *        The window only needs YIN_W + YIN_TAU_MAX <= FRAME_SIZE samples.
+ *        With SAMPLE_FREQ=4096 this is 25.6 Hz, still below the lowest bass
+ *        string (a 5-string low B is ~31 Hz), so the usable range is unaffected.
+ *        The difference-function cost is O(YIN_W * YIN_TAU_MAX) and dominates the
+ *        whole estimator, so this lag is the main speed knob. 160 was picked with
+ *        bench/sweep.sh as the smallest lag with no measured accuracy change from
+ *        the original 256 (identical gross-miss count and ~2 cent median error),
+ *        cutting the difference loop by 38% (from ~150% to ~93% of the frame
+ *        budget). The window only needs YIN_W + YIN_TAU_MAX <= FRAME_SIZE samples.
  *        Overridable from the build (e.g. the accuracy/cost sweep).
  */
 #ifndef YIN_TAU_MAX
-#define YIN_TAU_MAX 256
+#define YIN_TAU_MAX 160
 #endif
 
 /**
