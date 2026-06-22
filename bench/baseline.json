@@ -1,0 +1,25 @@
+{
+  "_comment": "Regression baseline for bench/check_regression.py. Regenerate with: ./check_regression.py --update (required after an avr-gcc version bump).",
+  "toolchain": "7.3.0",
+  "ceilings": {
+    "flash": 65536,
+    "ram": 8192
+  },
+  "tolerances": {
+    "flash": 0.02,
+    "ram": 0.02,
+    "cycles": 0.05
+  },
+  "configs": {
+    "YIN/Os+lto": {
+      "flash": 5098,
+      "ram": 5217,
+      "cycles": 8978951
+    },
+    "FFT/Os+lto": {
+      "flash": 9522,
+      "ram": 7777,
+      "cycles": 4094975
+    }
+  }
+}
