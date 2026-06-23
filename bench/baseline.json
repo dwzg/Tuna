@@ -12,12 +12,12 @@
   },
   "configs": {
     "YIN/Os+lto": {
-      "flash": 5096,
+      "flash": 5088,
       "ram": 4833,
       "cycles": 5598348
     },
     "FFT/Os+lto": {
-      "flash": 9404,
+      "flash": 9402,
       "ram": 5217,
       "cycles": 3816015
     }
