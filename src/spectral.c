@@ -45,6 +45,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <math.h>
 #include "window.h"
 #include "fft.h"
+#include "profile.h"
 
 /*---------------------------------------------------------------------------*/
 /*                         DEFINITIONS AND MACROS                            */
@@ -57,7 +58,6 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
 /*---------------------------------------------------------------------------*/
-static uint32_t isqrt_rounded(uint32_t value);
 static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint16_t k);
 static int16_t real_dc_nyquist_mag(int16_t zr, int16_t zi, int8_t sign);
 static uint8_t fundamental_divisor(const int16_t spectrum[], uint16_t peak_bin, int16_t peak);
@@ -85,6 +85,8 @@ double spectral_frequency(int16_t samples[])
     double freq_bin = (double)SAMPLE_FREQ / (double)FRAME_SIZE;
     double delta = 0.0;
 
+    PROFILE_MARK(1);    /* stage boundaries for bench/profile_stages.sh */
+
     /*
      * Remove the DC component before windowing. The AC-coupled input is biased
      * at VDD/2 and re-centred by a fixed offset, so a small residual bias can
@@ -97,9 +99,11 @@ double spectral_frequency(int16_t samples[])
     for (i = 0; i < FRAME_SIZE; ++i) {
         samples[i] = (int16_t)((int32_t)samples[i] - mean);
     }
+    PROFILE_MARK(2);    /* DC removal done */
 
     /* Reduce spectral leakage before transforming. */
     window_apply_window(samples);
+    PROFILE_MARK(3);    /* windowing done */
 
     /*
      * Real-input FFT. The real signal is packed into a half-size complex
@@ -119,8 +123,10 @@ double spectral_frequency(int16_t samples[])
     for (i = 0; i < SPECTRUM_BINS; ++i) {
         samples[i] = samples[2 * i];
     }
+    PROFILE_MARK(4);    /* real-input pack done */
 
     fft(samples, fft_scratch, LOG2_FRAME_SIZE - 1, 0);
+    PROFILE_MARK(5);    /* FFT transform done */
 
     /*
      * Split the N/2-point spectrum Z (real in samples[], imaginary in
@@ -148,6 +154,7 @@ double spectral_frequency(int16_t samples[])
         samples[0] = dc_mag;
         samples[SPECTRUM_BINS] = nyquist_mag;
     }
+    PROFILE_MARK(6);    /* magnitude split done */
 
     /* Strongest (and best frequency-resolved) bin, skipping DC (bin 0). */
     max = samples[1];
@@ -158,12 +165,14 @@ double spectral_frequency(int16_t samples[])
             max_index = i;
         }
     }
+    PROFILE_MARK(7);    /* peak pick done */
 
     /*
      * Octave correction: the strongest bin is frequently a harmonic rather than
      * the fundamental, so resolve which sub-multiple of it the fundamental is.
      */
     harmonic_number = fundamental_divisor(samples, max_index, max);
+    PROFILE_MARK(8);    /* octave correction done */
 
     /*
      * Parabolic interpolation in bin space for sub-bin frequency resolution.
@@ -183,49 +192,22 @@ double spectral_frequency(int16_t samples[])
         }
     }
 
+    PROFILE_MARK(9);    /* parabolic interpolation done */
+
     return ((double)max_index + delta) * freq_bin / (double)harmonic_number;
-}
-
-/**
- * @brief    Fast integer square root, with arithmetic rounding.
- * @param[in] value Unsigned integer for which to find the square root.
- * @return Integer square root of the input value.
- */
-static uint32_t isqrt_rounded(uint32_t value)
-{
-    uint32_t op  = value;
-    uint32_t res = 0;
-    uint32_t one = 1UL << 30; /* highest power of four <= 2^32 */
-
-    while (one > op) {
-        one >>= 2;
-    }
-
-    while (one != 0) {
-        if (op >= res + one) {
-            op = op - (res + one);
-            res = res + 2 * one;
-        }
-        res >>= 1;
-        one >>= 2;
-    }
-
-    /* Round to nearest integer. */
-    if (op > res) {
-        res++;
-    }
-
-    return res;
 }
 
 /**
  * @brief Magnitude of true-spectrum bin k from the half-size complex FFT.
  *        Recombines Z[k] = (ar, ai) with its mirror Z[N/2-k] = (br, bi) using
  *        the standard real-FFT split, then applies the bin's twiddle factor
- *        W = exp(-j*2*pi*k/N). All intermediates stay in int16/int32 range
- *        (the two >>1 keep the squared magnitude inside uint32). The result is
- *        a consistently-scaled magnitude; only relative bin heights matter for
- *        peak picking.
+ *        W = exp(-j*2*pi*k/N), and takes the magnitude with the alpha-max-plus-
+ *        beta-min approximation, |z| ~= max(|re|,|im|) + min(|re|,|im|)/2,
+ *        instead of an exact sqrt. The approximation is within ~12% per bin but
+ *        costs only a compare, a shift and an add (no square, no sqrt); the FFT
+ *        magnitude bench (bench/) confirmed it leaves pitch accuracy unchanged,
+ *        since the peak pick, octave check and log-parabola use only relative
+ *        bin heights. The result is a consistently-scaled magnitude.
  * @param[in] ar,ai  Real/imaginary parts of Z[k].
  * @param[in] br,bi  Real/imaginary parts of the mirror Z[N/2-k].
  * @param[in] k      Bin index (1 .. N/2-1).
@@ -241,11 +223,14 @@ static int16_t real_bin_mag(int16_t ar, int16_t ai, int16_t br, int16_t bi, uint
     int16_t wi = (int16_t)(-SINEWAVE[k]);               /* -sin(2*pi*k/N) */
     int16_t pr = (int16_t)(fix_mpy(wr, xor_) - fix_mpy(wi, xoi));
     int16_t pi = (int16_t)(fix_mpy(wr, xoi) + fix_mpy(wi, xor_));
-    int32_t xr = ((int32_t)xer + pr) >> 1;
-    int32_t xi = ((int32_t)xei + pi) >> 1;
-    uint32_t s = (uint32_t)(xr * xr) + (uint32_t)(xi * xi);
+    int16_t xr = (int16_t)(((int32_t)xer + pr) >> 1);
+    int16_t xi = (int16_t)(((int32_t)xei + pi) >> 1);
+    uint16_t ax = (uint16_t)(xr < 0 ? -xr : xr);
+    uint16_t ay = (uint16_t)(xi < 0 ? -xi : xi);
+    uint16_t mx = ax > ay ? ax : ay;
+    uint16_t mn = ax < ay ? ax : ay;
 
-    return (int16_t)isqrt_rounded(s);
+    return (int16_t)(mx + (mn >> 1));
 }
 
 /**

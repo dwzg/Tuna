@@ -41,6 +41,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <stdint.h>
 #include "config.h"
 #include "yin.h"
+#include "profile.h"
 
 #ifdef PITCH_METHOD_YIN
 
@@ -49,18 +50,28 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /**
  * @brief Integration window length: number of sample pairs summed per lag.
+ *        Overridable from the build (e.g. the accuracy/cost sweep) but defaults
+ *        to half the frame; the dominant loop costs O(YIN_W * YIN_TAU_MAX).
  */
+#ifndef YIN_W
 #define YIN_W (FRAME_SIZE / 2)
+#endif
 
 /**
  * @brief Maximum lag. Sets the lowest detectable frequency = SAMPLE_FREQ / YIN_TAU_MAX.
- *        With SAMPLE_FREQ=4096 this is 16 Hz, still well below the lowest bass
- *        string (a 5-string low B is ~31 Hz), so the extra range up to 8 Hz that
- *        a larger lag would buy is unused. The difference-function cost is
- *        O(YIN_W * YIN_TAU_MAX), so halving the lag halves the dominant loop.
- *        The window only needs YIN_W + YIN_TAU_MAX <= FRAME_SIZE samples.
+ *        With SAMPLE_FREQ=4096 this is 25.6 Hz, still below the lowest bass
+ *        string (a 5-string low B is ~31 Hz), so the usable range is unaffected.
+ *        The difference-function cost is O(YIN_W * YIN_TAU_MAX) and dominates the
+ *        whole estimator, so this lag is the main speed knob. 160 was picked with
+ *        bench/sweep.sh as the smallest lag with no measured accuracy change from
+ *        the original 256 (identical gross-miss count and ~2 cent median error),
+ *        cutting the difference loop by 38% (from ~150% to ~93% of the frame
+ *        budget). The window only needs YIN_W + YIN_TAU_MAX <= FRAME_SIZE samples.
+ *        Overridable from the build (e.g. the accuracy/cost sweep).
  */
-#define YIN_TAU_MAX 256
+#ifndef YIN_TAU_MAX
+#define YIN_TAU_MAX 160
+#endif
 
 /**
  * @brief Smallest lag considered, i.e. the highest detectable frequency
@@ -85,6 +96,8 @@ double yin_frequency(int16_t samples[])
     double better_tau;
 
     cmnd[0] = 1.0f;
+
+    PROFILE_MARK(1);    /* stage boundaries for bench/profile_stages.sh */
 
     /*
      * Difference function d(tau) plus cumulative mean normalization in one
@@ -111,6 +124,7 @@ double yin_frequency(int16_t samples[])
                   ? (float)((double)acc * (double)tau / (double)running_sum)
                   : 1.0f;
     }
+    PROFILE_MARK(2);    /* difference function + CMND normalization done */
 
     /* Absolute threshold: first dip below YIN_THRESHOLD, descended to its local minimum. */
     for (tau = YIN_TAU_MIN; tau < YIN_TAU_MAX - 1; ++tau) {
@@ -135,6 +149,8 @@ double yin_frequency(int16_t samples[])
         }
     }
 
+    PROFILE_MARK(3);    /* threshold / minimum search done */
+
     /* Parabolic interpolation of the lag around tau_est for sub-sample accuracy. */
     better_tau = (double)tau_est;
     if (tau_est > 0 && tau_est < YIN_TAU_MAX - 1) {
@@ -146,6 +162,8 @@ double yin_frequency(int16_t samples[])
             better_tau = (double)tau_est + (double)(s0 - s2) / (2.0 * denom);
         }
     }
+
+    PROFILE_MARK(4);    /* parabolic interpolation done */
 
     if (better_tau <= 0.0) {
         return 0.0;

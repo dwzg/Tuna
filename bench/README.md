@@ -115,15 +115,69 @@ installs on `ubuntu-latest`, so it matches the CI runner.
 > `develop` forbids pushes from Actions, drop the `update-baseline` job and rely
 > on the manual in-PR bump above.
 
+## Per-stage profiling
+
+`profile_stages.sh` breaks each pitch path into its DSP stages and reports the
+cycles spent in each. It builds `bench_profile.c` with `-DTUNA_PROFILE`, which
+activates the `PROFILE_MARK()` markers in `src/yin.c` / `src/spectral.c` (the
+markers expand to nothing in every normal build, so production firmware is
+byte-for-byte unchanged), and `simprof` reads the cycle counter at each marker.
+
+```sh
+cd bench && ./profile_stages.sh   # writes profile.md
+```
+
+Reference run (`-Os -flto`): **YIN is ~100% the difference+CMND loop**, so the
+only lever is its work — see the sweep below. For **FFT the transform dominates
+(~72%)** followed by the magnitude split (~21%); the windowing is ~4% and the
+entire floating-point tail (peak-pick `log()`, interpolation) is ~0.2%, which is
+why fast-math on the tail is not worth pursuing.
+
+The profiler also drove a magnitude-split optimization. That stage was first
+~26% of the FFT path, but the profile showed only ~25% of *it* was the square
+root — the rest is the real-FFT split/twiddle arithmetic. Replacing the exact
+`isqrt` with the alpha-max-plus-beta-min magnitude approximation
+(`max(|re|,|im|) + min(|re|,|im|)/2`, in `src/spectral.c`) cut the whole FFT
+path by ~6.6% with no measurable accuracy change (Hanning mean 0.27 → 0.28
+cents, zero gross misses, `test_fft` still passes), since peak-pick, octave
+correction and the log-parabola use only relative bin heights.
+
+## Parameter sweep (accuracy vs. cost)
+
+`sweep.sh` answers "how far can the YIN knobs be cut before accuracy suffers?".
+Since the profile shows YIN's cost is entirely `O(YIN_W * YIN_TAU_MAX)`, it
+sweeps those two (now build-overridable in `src/yin.c`) and pairs, for each
+setting, the **pitch error in cents** over a 30–1000 Hz synthetic corpus
+(`sweep_yin.c`, host) with the **DSP cycles** under simavr.
+
+```sh
+cd bench && ./sweep.sh            # writes sweep.md
+```
+
+This sweep showed the original `YIN_TAU_MAX=256` was ~1.6× more expensive than
+needed, so **`YIN_TAU_MAX` is now 160** (`src/yin.c`): identical accuracy to 256
+(same gross-miss count, ~2 cent median) but 150% → 93% of the frame budget, with
+the 25.6 Hz floor still below the lowest bass string — the first setting that
+fits YIN under the per-frame budget. `YIN_W` is left at 512: dropping it to 256
+would roughly halve the cost again (93% → 48%) but does move the median (2.2 →
+3.9 cents), so it is a real, if small, accuracy trade rather than a free win and
+was not applied. (The p95 column stays ~1200 cents throughout because the corpus
+includes deliberately hard weak-fundamental tones that octave-error regardless
+of the knobs — read the median and gross-miss columns for the knob effect.)
+
 ## Files
 
-- `run_bench.sh` — driver; sweeps the configs, writes `results.md` (full run) and `out/results.tsv` (machine-readable). `--configs`/`--methods` restrict the sweep.
+- `run_bench.sh` — optimization-level sweep; writes `results.md` and `out/results.tsv`. `--configs`/`--methods` restrict it.
 - `check_regression.py` — CI gate: compares the shipped config to `baseline.json` (tolerances + chip ceilings). `--update` rewrites the baseline.
 - `baseline.json` — committed reference numbers + tolerances + ceilings.
 - `bench_dsp.c` — AVR firmware harness: one pitch pass, bracketed by `GPIOR0` markers.
 - `simrun.c` — host program: runs a harness image under simavr, prints the bracketed cycle count.
+- `profile_stages.sh` — per-stage cycle profiler; writes `profile.md`.
+- `bench_profile.c` / `simprof.c` — profiling harness and runner (read every `PROFILE_MARK()` transition).
+- `sweep.sh` — YIN accuracy-vs-cost sweep; writes `sweep.md`.
+- `sweep_yin.c` — host accuracy probe for the sweep (cents error over a tone corpus).
 - `gen_frame.py` → `bench_frame.h` — the fixed 220 Hz (A3) input frame, embedded so every build sees identical data.
-- `results.md` — generated full-sweep table (committed as the reference run).
+- `results.md` / `profile.md` / `sweep.md` — generated tables, committed as reference runs.
 
 ## Key findings (reference run: avr-gcc 7.3.0)
 
