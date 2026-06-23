@@ -16,8 +16,8 @@ The entry point. `main()` is an infinite loop calling `control()`. No other logi
 
 ### control.c / control.h
 
-The cooperative state machine (`INIT → ACQUISITION → ANALYSIS → DISPLAY → …`, with
-an `ERROR` halt trap) plus the startup splash and the note-rendering glue.
+The cooperative state machine (`INIT → ACQUISITION → ANALYSIS → DISPLAY → …`) plus
+the startup splash and the note-rendering glue.
 
 | Symbol | Role |
 |---|---|

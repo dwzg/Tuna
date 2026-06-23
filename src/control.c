@@ -56,7 +56,7 @@ For more information, please refer to <http://unlicense.org/>
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */
 /*---------------------------------------------------------------------------*/
-typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY, ERROR } CONTROL_STATE;
+typedef enum { INIT, ACQUISITION, ANALYSIS, DISPLAY } CONTROL_STATE;
 
 /*---------------------------------------------------------------------------*/
 /*                               PROTOTYPES                                  */
@@ -124,18 +124,6 @@ void control(void)
         display_note(peak_freq);
         current_state = ACQUISITION;
         break;
-    case ERROR:
-    default:
-        /*
-         * Fault trap: unreachable in correct operation, but a corrupted state
-         * variable lands here. Latch an "Er" indication once and halt the CPU
-         * in low-power idle instead of re-driving the display in a tight loop.
-         */
-        segment_display_alpha(0, 'E');
-        segment_display_alpha(1, 'R');
-        for (;;) {
-            hal_sleep_idle();
-        }
     }
 }
 

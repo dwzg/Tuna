@@ -76,7 +76,7 @@ The program is a cooperative state machine, not an RTOS. `main()` calls `control
 tight loop forever; `control()` (`control.c`) advances a single state variable through:
 
 ```
-INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)   [ERROR is a halt trap]
+INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)
 ```
 
 Acquisition and analysis are **double-buffered and pipelined**: `acquisition.c` owns two
@@ -126,9 +126,7 @@ before adding intermediate copies:
   frequencies to musical pitch classes; `smoothing.c` stabilises the per-frame estimate
   (EMA plus octave-jump rejection).
 - **Control (`control.c`, `main.c`)** — the cooperative state machine described above,
-  plus the startup splash. The `ERROR`/`default` case is a defensive halt trap: it
-  latches an "Er" indication and idles the CPU, reachable only if the state variable is
-  corrupted.
+  plus the startup splash.
 
 ### Compile-time configuration
 
