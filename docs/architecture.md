@@ -35,13 +35,6 @@ stateDiagram-v2
     ACQUISITION --> ANALYSIS: collect filled frame
     ANALYSIS --> DISPLAY: estimate + smooth pitch
     DISPLAY --> ACQUISITION: render note/cents
-    ERROR --> ERROR: halt (idle CPU forever)
-    note right of ERROR
-        Defensive fault trap.
-        Unreachable in correct operation;
-        reached only if the state variable
-        is corrupted. Latches "Er".
-    end note
 ```
 
 | State | Responsibility |
@@ -50,7 +43,6 @@ stateDiagram-v2
 | `ACQUISITION` | `acquisition_collect()` blocks (CPU asleep) until the in-flight fill finishes, returns the just-filled frame, and immediately relaunches the next fill into the other buffer. Transitions to `ANALYSIS`. |
 | `ANALYSIS` | Gate on `signal_is_present()`; if silent, force frequency to 0. Otherwise run the configured pitch estimator (`yin_frequency()` or `spectral_frequency()`). Then `smooth_frequency()`. Transitions to `DISPLAY`. |
 | `DISPLAY` | `display_note()` renders note/octave/cents and flushes the framebuffer. Transitions back to `ACQUISITION`. |
-| `ERROR` / `default` | Fault trap. Unreachable in correct operation, reached only if the state variable is corrupted. Latches an `Er` indication once and idles the CPU forever (`hal_sleep_idle()`) instead of re-driving the display in a tight loop. |
 
 After `INIT` the machine cycles `ACQUISITION → ANALYSIS → DISPLAY` indefinitely.
 
