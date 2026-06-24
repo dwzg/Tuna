@@ -214,6 +214,16 @@ void hal_sleep_idle(void)
     sleep_disable();
 }
 
+void hal_disable_interrupts(void)
+{
+    cli();
+}
+
+void hal_enable_interrupts(void)
+{
+    sei();
+}
+
 void hal_delay_ms(uint16_t ms)
 {
     _delay_ms((double)ms);

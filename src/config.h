@@ -66,6 +66,29 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define SILENCE_THRESHOLD 40
 
+/**
+ * @brief Hop between successive analysis windows, in samples. Acquisition keeps
+ *        a rolling FRAME_SIZE history that the ADC fills continuously; each
+ *        analysis frame slides forward by HOP_SIZE and overlaps the previous one
+ *        by FRAME_SIZE - HOP_SIZE samples. A new reading is therefore produced
+ *        every HOP_SIZE / SAMPLE_FREQ seconds instead of once per full frame,
+ *        which spends the compute that would otherwise idle between frames on a
+ *        higher display update rate and lower latency.
+ *
+ *        Must be in 1 .. FRAME_SIZE. HOP_SIZE == FRAME_SIZE reproduces the old
+ *        non-overlapping behaviour. The update rate cannot exceed what the
+ *        selected pitch method can analyse within one hop period; below that the
+ *        pipeline simply re-analyses the most recent window and drops the hops it
+ *        could not keep up with (the cadence degrades gracefully towards one
+ *        frame's worth of analysis time, never worse than the old behaviour).
+ *        The default FRAME_SIZE/2 doubles the rate to ~8 Hz (125 ms at
+ *        SAMPLE_FREQ=4096), which the YIN path - roughly half a frame of compute
+ *        - comfortably sustains.
+ */
+#ifndef HOP_SIZE
+#define HOP_SIZE (FRAME_SIZE / 2)
+#endif
+
 /* --- Pitch-detection method --------------------------------------------- */
 
 /**

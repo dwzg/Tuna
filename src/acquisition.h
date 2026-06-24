@@ -57,20 +57,22 @@ For more information, please refer to <http://unlicense.org/>
 /*                           FUNCTION PROTOTYPES                             */
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Start the acquisition pipeline by launching the first background fill.
- *        Call once before the first acquisition_collect().
+ * @brief Start the acquisition pipeline by launching the continuous background
+ *        fill of the internal sample ring. Call once before the first
+ *        acquisition_collect().
  */
 void acquisition_prime(void);
 
 /**
- * @brief Collect the frame the ADC has been filling and hand it back for
- *        analysis, immediately launching the next fill into the other of the
- *        two internal buffers so sampling overlaps analysis/display
- *        (double-buffered pipeline). Blocks (sleeping the CPU between samples)
- *        until the in-flight fill completes.
- * @return Pointer to the just-filled FRAME_SIZE buffer. It is owned by the caller
- *         only until the next acquisition_collect(), and may be overwritten in
- *         place during analysis.
+ * @brief Collect the most recent FRAME_SIZE samples as the next analysis window
+ *        and hand them back for analysis. The ADC fills a rolling history ring
+ *        in the background, so successive windows are taken HOP_SIZE samples
+ *        apart and overlap by FRAME_SIZE - HOP_SIZE: a reading is produced every
+ *        HOP_SIZE samples rather than once per full frame. Blocks (sleeping the
+ *        CPU) until the next hop's worth of fresh samples has arrived.
+ * @return Pointer to a FRAME_SIZE window owned by the caller until the next
+ *         acquisition_collect(); it is a private copy and may be overwritten in
+ *         place during analysis without disturbing the retained ring history.
  */
 int16_t *acquisition_collect(void);
 

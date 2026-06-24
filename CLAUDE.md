@@ -79,17 +79,25 @@ tight loop forever; `control()` (`control.c`) advances a single state variable t
 INIT -> ACQUISITION -> ANALYSIS -> DISPLAY -> (back to ACQUISITION)
 ```
 
-Acquisition and analysis are **double-buffered and pipelined**: `acquisition.c` owns two
-`int16_t[FRAME_SIZE]` buffers internally and ping-pongs between them. While one buffer is
-analysed, the ADC fills the other in the background, so sampling overlaps analysis/display
-instead of stalling it. Within a single frame the signal-processing stages still operate
-**in place on that one buffer** (the pitch estimators overwrite it), so keep that in mind
-before adding intermediate copies:
+Acquisition and analysis are **pipelined with overlapping (hopped) windows**:
+`acquisition.c` owns an `int16_t[FRAME_SIZE]` ring that the ADC fills continuously in the
+background, plus a second `int16_t[FRAME_SIZE]` window handed to analysis. Successive
+analysis windows are taken `HOP_SIZE` samples apart (config.h, default `FRAME_SIZE/2`), so
+they overlap by `FRAME_SIZE - HOP_SIZE` and a reading is produced every `HOP_SIZE` samples
+instead of once per full frame — spending the compute that used to idle between frames on a
+higher update rate / lower latency. Analysis still runs **in place on the returned window**
+(the pitch estimators overwrite it), but that window is a *copy* of the ring snapshot, so
+the destruction does not disturb the retained history the next overlapping window reuses —
+keep that copy boundary in mind before adding intermediate buffers:
 
-1. **acquisition** — `acquisition_prime()` launches the first background fill at startup;
-   thereafter `acquisition_collect()` blocks (sleeping the CPU between samples) until the
-   in-flight fill completes, relaunches the next fill into the other buffer, and returns
-   the just-filled frame for analysis. The buffer swap lives inside `acquisition.c`.
+1. **acquisition** — `acquisition_prime()` starts the continuous background fill of the
+   ring at startup; thereafter `acquisition_collect()` blocks (sleeping the CPU) until the
+   next `HOP_SIZE` samples have arrived, then snapshots the most recent `FRAME_SIZE`
+   samples into the private analysis window and returns it. The snapshot copy races ahead
+   of the one-sample-per-period producer, so it is consistent without holding off
+   interrupts; only the 16-bit ring head is latched under a short HAL critical section. If
+   analysis runs longer than a hop the pipeline drops the missed hops and re-analyses the
+   latest window, so the cadence degrades gracefully and never beats the analysis time.
 2. **analysis** — the frame is gated on input level (`signal_is_present()`), then the
    pitch method selected in `config.h` estimates the fundamental frequency:
    - **YIN** (default) — `yin_frequency()` (`yin.c`) does a time-domain autocorrelation
