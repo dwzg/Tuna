@@ -13,17 +13,21 @@ Before any pitch estimation, `signal_is_present()` (`control.c`) decides whether
 the frame carries a usable signal. A quiet room otherwise drives the estimator
 from noise and flickers random notes.
 
-It computes the frame's **DC level** (mean) and then checks whether any sample
-deviates from that mean by at least `SILENCE_THRESHOLD` (in ADC counts):
+It computes the frame's **DC level** (mean) and then checks whether at least
+`SIGNAL_MIN_SAMPLES` samples deviate from that mean by at least
+`SILENCE_THRESHOLD` (in ADC counts):
 
 ```text
 mean = (Σ buffer[k]) / FRAME_SIZE
-for each sample: if |buffer[k] - mean| >= SILENCE_THRESHOLD → signal present
+signal present ⇔ #{k : |buffer[k] - mean| >= SILENCE_THRESHOLD} >= SIGNAL_MIN_SAMPLES
 ```
 
 Gating on the **AC excursion** (distance from the mean) rather than raw sample
 magnitude means a residual DC bias on the AC-coupled input can neither mask a
-quiet signal nor be mistaken for one. When the frame is silent, `control()` sets
+quiet signal nor be mistaken for one. Requiring several crossings (default 8)
+keeps a single impulse spike — a switch click, a key clack — from opening the
+gate on an otherwise silent frame; a real tone at threshold amplitude crosses
+hundreds of times per frame. When the frame is silent, `control()` sets
 the frequency to 0, which blanks the display.
 
 ## Pitch method selection
@@ -60,7 +64,7 @@ normalisation, absolute threshold, and parabolic interpolation.
 
 ```mermaid
 flowchart TD
-    A["Difference function d(τ) +<br/>cumulative mean normalisation (CMND)"] --> B["Absolute threshold:<br/>first dip below YIN_THRESHOLD,<br/>descend to local minimum"]
+    A["Difference function d(τ) +<br/>cumulative mean normalisation (CMND)"] --> B["Fused absolute threshold (early exit):<br/>first dip below YIN_THRESHOLD,<br/>descend to local minimum, stop"]
     B --> C{"crossed<br/>threshold?"}
     C -- no --> D["Fallback: global minimum of CMND"]
     C -- yes --> E["Parabolic interpolation of the lag"]
@@ -74,12 +78,13 @@ flowchart TD
 |---|---|---|
 | `YIN_W` | `FRAME_SIZE / 2` | Integration window: sample pairs summed per lag. |
 | `YIN_TAU_MIN` | 2 | Smallest lag → highest detectable frequency (`SAMPLE_FREQ/2`), skips trivial lags 0/1. |
-| `YIN_TAU_MAX` | 256 | Largest lag → lowest detectable frequency = `SAMPLE_FREQ/YIN_TAU_MAX` (≈16 Hz at 4096 Hz). |
+| `YIN_TAU_MAX` | 160 | Largest lag → lowest detectable frequency = `SAMPLE_FREQ/YIN_TAU_MAX` (25.6 Hz at 4096 Hz). |
 
-16 Hz is well below the lowest bass string (a 5-string low B is ≈31 Hz), so a
-larger lag would only buy unused range. Since the difference-function cost is
-`O(YIN_W · YIN_TAU_MAX)`, halving the lag halves the dominant loop. The window
-only needs `YIN_W + YIN_TAU_MAX ≤ FRAME_SIZE` samples.
+25.6 Hz is still below the lowest bass string (a 5-string low B is ≈31 Hz), so a
+larger lag would only buy unused range. Since the worst-case difference-function
+cost is `O(YIN_W · YIN_TAU_MAX)`, halving the lag halves the dominant loop. The
+window only needs `YIN_W + YIN_TAU_MAX ≤ FRAME_SIZE` samples (enforced at
+compile time).
 
 ### Difference function + normalisation
 
@@ -113,13 +118,20 @@ floating-point divide is deferred to the normalisation step.
 
 ### Threshold and interpolation
 
-1. **Absolute threshold:** scan from `YIN_TAU_MIN` for the first lag whose CMND
-   value dips below `YIN_THRESHOLD` (default 0.15; lower is stricter), then descend
-   to that dip's local minimum. That lag is the period estimate.
-2. **Fallback:** if nothing crosses the threshold, use the global minimum of the
-   CMND over the lag range.
+1. **Absolute threshold (fused, early exit):** the threshold search runs inside
+   the difference-function loop itself. `cmnd[τ]` depends only on lags ≤ τ, so
+   the loop watches for the first lag whose CMND value dips below
+   `YIN_THRESHOLD` (default 0.15; lower is stricter), descends to that dip's
+   local minimum, and then **stops** — no later lag can change the estimate, so
+   the remaining difference-function work is skipped. The exit lag is the
+   note's period (`≈ SAMPLE_FREQ / f0`), so higher notes exit earlier: an A4
+   stops after ~12 of the 160 lags, cutting the dominant loop by >90 % for that
+   frame. Only a frame with no detectable dip pays the full worst-case cost.
+2. **Fallback:** if nothing crosses the threshold (the loop ran to the end),
+   use the global minimum of the CMND over the lag range.
 3. **Parabolic interpolation:** fit a parabola to the CMND around the chosen lag
-   for sub-sample period accuracy.
+   for sub-sample period accuracy (the early exit always leaves the rising
+   neighbour `cmnd[τ+1]` computed).
 
 The frequency is `SAMPLE_FREQ / interpolated_lag` (0 if the lag is non-positive).
 
@@ -130,7 +142,7 @@ spectrum. It is only compiled when `PITCH_METHOD_FFT` is selected.
 
 ```mermaid
 flowchart TD
-    A["Remove DC (subtract per-frame mean)"] --> B["Apply window taper"]
+    A["Remove DC + prescale ×8<br/>(subtract per-frame mean, << 3)"] --> B["Apply window taper"]
     B --> C["Pack real signal into half-size complex sequence"]
     C --> D["N/2-point complex FFT"]
     D --> E["Split step → N/2+1 magnitude bins"]
@@ -142,10 +154,16 @@ flowchart TD
 
 ### Pre-processing
 
-1. **DC removal:** the per-frame mean is subtracted from every sample. The
+1. **DC removal + prescale:** the per-frame mean is subtracted from every
+   sample and the result is shifted left by 3 bits in the same pass. The
    AC-coupled input is biased at VDD/2 and re-centred by a fixed offset, so a
-   small residual bias can remain and would otherwise leak through the window into
-   the low bins.
+   small residual bias can remain and would otherwise leak through the window
+   into the low bins. The prescale exists because the fixed-point FFT is
+   designed for full-scale ±32767 input while the ADC delivers only 12 bits:
+   without it the transform's quantization floor sits 8× higher relative to the
+   signal, hurting exactly the weak bins that the octave correction's
+   harmonic-support threshold and the log-parabola read. 3 bits is the most
+   that provably cannot overflow (`|sample − mean| < 4096`).
 2. **Windowing:** `window_apply_window()` tapers the frame to reduce spectral
    leakage (see [Window functions](#window-functions)).
 

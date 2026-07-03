@@ -9,7 +9,7 @@ For more information, please refer to <http://unlicense.org/>
  *         Exercises the silence reset, the EMA hold, transient octave-error
  *         rejection (with eventual give-in), and the snap-through on a genuine
  *         note change. Assumes the config.h defaults SMOOTHING_ALPHA=0.5 and
- *         OCTAVE_JUMP_FRAMES=3.
+ *         OCTAVE_JUMP_FRAMES=2.
  */
 
 #include <stdio.h>
@@ -49,9 +49,7 @@ int main(void)
     smooth_frequency(100.0);
     y = smooth_frequency(200.0);            /* vote 1: held */
     expect("octave-hold-1", y, 100.0, 1e-9);
-    y = smooth_frequency(200.0);            /* vote 2: held */
-    expect("octave-hold-2", y, 100.0, 1e-9);
-    y = smooth_frequency(200.0);            /* vote 3: accepted */
+    y = smooth_frequency(200.0);            /* vote 2: accepted */
     expect("octave-give-in", y, 200.0, 1e-9);
 
     /* The downward half-pitch error is rejected symmetrically. */
@@ -59,9 +57,7 @@ int main(void)
     smooth_frequency(200.0);
     y = smooth_frequency(100.0);            /* vote 1: held */
     expect("octave-down-hold-1", y, 200.0, 1e-9);
-    y = smooth_frequency(100.0);            /* vote 2: held */
-    expect("octave-down-hold-2", y, 200.0, 1e-9);
-    y = smooth_frequency(100.0);            /* vote 3: accepted */
+    y = smooth_frequency(100.0);            /* vote 2: accepted */
     expect("octave-down-give-in", y, 100.0, 1e-9);
 
     /* A non-octave interval (here a fifth) never counts as an octave artifact
@@ -75,7 +71,6 @@ int main(void)
     smooth_frequency(0.0);
     smooth_frequency(100.0);
     smooth_frequency(200.0);                /* vote 1 */
-    smooth_frequency(200.0);                /* vote 2 */
     smooth_frequency(0.0);                  /* reset */
     expect("votes-reset", smooth_frequency(200.0), 200.0, 1e-9);
 

@@ -58,8 +58,11 @@ For more information, please refer to <http://unlicense.org/>
 #endif
 
 /**
- * @brief Sample frequency in Hz.
- *        Minimum is 367 Hz.
+ * @brief Sample frequency in Hz of the frames delivered to analysis. The HAL
+ *        paces the ADC at OVERSAMPLE_FACTOR (4) times this rate and averages
+ *        each group down to one sample (anti-aliasing comb + noise reduction;
+ *        see hal.c). The 16-bit sample timer bounds the oversampled rate to
+ *        >= 367 Hz, i.e. SAMPLE_FREQ >= 92 Hz.
  */
 #define SAMPLE_FREQ 4096UL
 
@@ -69,6 +72,16 @@ For more information, please refer to <http://unlicense.org/>
  *        display is blanked instead of reporting a noise-driven note.
  */
 #define SILENCE_THRESHOLD 40
+
+/**
+ * @brief Number of samples in a frame that must reach SILENCE_THRESHOLD before
+ *        the frame counts as signal. Requiring more than one sample keeps a
+ *        single impulse (a switch click, a key clack) from opening the gate
+ *        and running the pitch estimator on what is otherwise a silent frame.
+ *        A real tone at the threshold amplitude crosses it hundreds of times
+ *        per frame, so this does not raise the effective sensitivity floor.
+ */
+#define SIGNAL_MIN_SAMPLES 8
 
 /* --- Pitch-detection method --------------------------------------------- */
 
@@ -161,9 +174,12 @@ For more information, please refer to <http://unlicense.org/>
 /**
  * @brief Number of consecutive frames an octave jump must persist before it is
  *        accepted as a real octave change rather than a transient half/double-
- *        pitch error from the pitch estimator.
+ *        pitch error from the pitch estimator. 2 rejects any single-frame
+ *        glitch while keeping the display lag on a genuine octave change to
+ *        one frame (~250 ms); raise it only if the estimator flickers octaves
+ *        for several frames in a row on real input.
  */
-#define OCTAVE_JUMP_FRAMES 3
+#define OCTAVE_JUMP_FRAMES 2
 
 /*---------------------------------------------------------------------------*/
 /*                         TYPEDEFS AND STRUCTURES                           */

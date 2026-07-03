@@ -60,7 +60,24 @@ For more information, please refer to <http://unlicense.org/>
 #define LOW 0
 #define HIGH 1
 
-#define COUNTER_TOP_VALUE (((F_CPU)/(SAMPLE_FREQ)) - 1UL)
+/*
+ * ADC oversampling factor. The ADC is timer-paced at OVERSAMPLE_FACTOR times
+ * SAMPLE_FREQ and each delivered sample is the average of that many
+ * conversions. There is no analog anti-aliasing filter in front of the ADC
+ * beyond the AC coupling, so at a bare SAMPLE_FREQ everything above Nyquist
+ * (upper harmonics of the note itself) would fold into the analysis band. The
+ * boxcar average of evenly spaced conversions is a free first-order comb
+ * filter with nulls at multiples of SAMPLE_FREQ, attenuating the fold-back
+ * region, and the averaging also lowers the ADC noise floor.
+ */
+#define OVERSAMPLE_FACTOR 4
+
+#define OVERSAMPLE_RATE ((SAMPLE_FREQ) * (OVERSAMPLE_FACTOR))
+
+/* Rounded division: every reported frequency scales with the real conversion
+ * rate, and truncating here would run ~580 ppm (~1 cent) sharp at 4x4096 Hz;
+ * rounding keeps the rate within ~110 ppm (~0.2 cents) of nominal. */
+#define COUNTER_TOP_VALUE ((((F_CPU) + (OVERSAMPLE_RATE) / 2) / (OVERSAMPLE_RATE)) - 1UL)
 
 /*
  * Mid-scale of the 12 bit single-ended ADC result (0..4095). Subtracting it
@@ -91,6 +108,11 @@ static void set_pin(PORT_t *port, uint8_t pin, uint8_t value);
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
 static HAL_SAMPLE_COUNTER_CALLBACK sample_counter_callback;
+
+/* Oversampling decimator state. Touched only by the result-ready ISR while
+ * sampling runs, and reset by hal_start_sample_counter() while it does not. */
+static volatile int16_t oversample_acc;
+static volatile uint8_t oversample_count;
 
 /*---------------------------------------------------------------------------*/
 /*                        FUNCTION IMPLEMENTATION                            */
@@ -168,6 +190,8 @@ void hal_init(void)
 void hal_start_sample_counter(HAL_SAMPLE_COUNTER_CALLBACK callback)
 {
     sample_counter_callback = callback;
+    oversample_acc = 0;
+    oversample_count = 0;
 
     /* Arm the result-ready interrupt, then let the timer drive conversions. */
     ADC0.INTFLAGS = ADC_RESRDY_bm;
@@ -251,10 +275,24 @@ static void set_pin(PORT_t *port, uint8_t pin, uint8_t value)
 ISR(ADC0_RESRDY_vect)
 {
     /* Reading the result register clears the result-ready flag. The conversion
-     * was started in hardware by the timer overflow event. */
-    int16_t sample = ((int16_t)ADC0.RES) - ADC_ZERO_OFFSET;
+     * was started in hardware by the timer overflow event. Conversions run at
+     * OVERSAMPLE_FACTOR times the sample rate; each group is averaged and
+     * delivered as one sample (see OVERSAMPLE_FACTOR above). The accumulator
+     * cannot overflow: OVERSAMPLE_FACTOR * 2048 fits comfortably in int16_t. */
+    oversample_acc += ((int16_t)ADC0.RES) - ADC_ZERO_OFFSET;
 
-    sample_counter_callback(sample);
+    if (++oversample_count < OVERSAMPLE_FACTOR) {
+        return;
+    }
+
+    {
+        int16_t sample = (int16_t)(oversample_acc / OVERSAMPLE_FACTOR);
+
+        oversample_acc = 0;
+        oversample_count = 0;
+
+        sample_counter_callback(sample);
+    }
 }
 
 /*---------------------------------------------------------------------------*/

@@ -91,15 +91,24 @@ double spectral_frequency(int16_t samples[])
      * Remove the DC component before windowing. The AC-coupled input is biased
      * at VDD/2 and re-centred by a fixed offset, so a small residual bias can
      * remain and would otherwise leak through the window into the low bins.
+     *
+     * The same pass pre-scales the samples by 3 bits. The fixed-point FFT is
+     * designed for full-scale +-32767 input (its fixed per-stage >>1 scaling
+     * guarantees no overflow for any such input), but the ADC delivers only 12
+     * bits, which would leave the transform's quantization floor 8x higher
+     * relative to the signal than necessary -- hurting exactly the weak bins
+     * that the harmonic-support threshold and the log-parabola read. 3 bits is
+     * the most that provably cannot overflow: |sample - mean| < 4096, so the
+     * scaled value stays within +-32760.
      */
     for (i = 0; i < FRAME_SIZE; ++i) {
         mean += samples[i];
     }
     mean /= FRAME_SIZE;
     for (i = 0; i < FRAME_SIZE; ++i) {
-        samples[i] = (int16_t)((int32_t)samples[i] - mean);
+        samples[i] = (int16_t)(((int32_t)samples[i] - mean) << 3);
     }
-    PROFILE_MARK(2);    /* DC removal done */
+    PROFILE_MARK(2);    /* DC removal + prescale done */
 
     /* Reduce spectral leakage before transforming. */
     window_apply_window(samples);

@@ -24,7 +24,7 @@ the startup splash and the note-rendering glue.
 | `control(void)` (public) | Advance the state machine one step. Called repeatedly by `main()`. |
 | `greet_message()` (static) | Power-up `HI`/`:)`/`TU`/`NA` splash animation. |
 | `display_note(frequency)` (static) | Map frequency → note and render letter/octave/cents needle (or blank if invalid). |
-| `signal_is_present(buffer)` (static) | Silence gate: true if any sample deviates from the frame mean by ≥ `SILENCE_THRESHOLD`. |
+| `signal_is_present(buffer)` (static) | Silence gate: true if at least `SIGNAL_MIN_SAMPLES` samples deviate from the frame mean by ≥ `SILENCE_THRESHOLD`. |
 
 ## Acquisition
 
