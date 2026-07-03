@@ -73,7 +73,7 @@ void max7219_init(void)
     max7219_reset();
 
     max7219_write(MAX7219_SCAN_LIMIT_REGISTER, 0x04); /* scan digits 0 to 4 */
-    max7219_write(MAX7219_INTENSITY_REGISTER, 0x07);  /* intensity to max */
+    max7219_write(MAX7219_INTENSITY_REGISTER, 0x07);  /* mid-scale intensity (max is 0x0F) */
     max7219_write(MAX7219_SHUTDOWN_REGISTER, 0x01);   /* normal operation */
 }
 

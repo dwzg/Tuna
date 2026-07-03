@@ -21,7 +21,7 @@ the build via `-DF_CPU=24000000UL`). **If you change the clock, change both.**
 
 > [!WARNING]
 > `F_CPU` feeds two time-critical calculations:
-> - the sample-rate timer top value (`COUNTER_TOP_VALUE = F_CPU / SAMPLE_FREQ - 1`), and
+> - the sample-rate timer top value (`COUNTER_TOP_VALUE`, a rounded division of `F_CPU` by the 4×-oversampled conversion rate), and
 > - the `<util/delay.h>` busy-wait delays used by the startup splash.
 >
 > A mismatch between the real clock and `F_CPU` silently changes the sample rate
@@ -31,18 +31,18 @@ the build via `-DF_CPU=24000000UL`). **If you change the clock, change both.**
 
 ```mermaid
 flowchart LR
-    TCA["TCA0 timer — overflows at SAMPLE_FREQ"] -->|overflow event| EV["EVSYS channel 0"]
+    TCA["TCA0 timer — overflows at 4 × SAMPLE_FREQ"] -->|overflow event| EV["EVSYS channel 0"]
     EV -->|hardware start trigger| ADC["ADC0 — 12-bit single-ended, VDD ref"]
     ADC -->|conversion complete| IRQ["ADC0_RESRDY ISR"]
-    IRQ -->|sample minus ADC_ZERO_OFFSET| CB["acquisition callback"]
+    IRQ -->|average of 4 re-centred conversions| CB["acquisition callback"]
 ```
 
 | Peripheral | Role |
 |---|---|
 | `ADC0` | 12-bit single-ended conversion. Reference is `VDD` (5 V). The ADC clock is set to `CLK_PER / 16` = 1.5 MHz (the device maximum at 24 MHz) via `ADC_PRESC_DIV16_gc`; without this the default prescaler runs the ADC far above its specified maximum and yields inaccurate conversions. `SAMPCTRL` is extended to 14 to settle higher source impedances. |
-| `TCA0` | Free-running timer that paces conversions. `PER` is set to `COUNTER_TOP_VALUE` so it overflows at exactly `SAMPLE_FREQ`. |
+| `TCA0` | Free-running timer that paces conversions. `PER` is set to `COUNTER_TOP_VALUE` (rounded division) so it overflows at 4 × `SAMPLE_FREQ` — the ADC is oversampled 4× and each group of conversions is averaged into one delivered sample. |
 | `EVSYS` | Event system. The TCA0 overflow is routed on channel 0 (`EVSYS_CHANNEL0_TCA0_OVF_LUNF_gc`) directly to the ADC start trigger (`USERADC0START`, `ADC_STARTEI_bm`). Each conversion is started **in hardware** at the timer overflow, eliminating the ISR-latency jitter that software-started conversions would suffer. |
-| `ADC0_RESRDY` ISR | Fires when a conversion completes. It reads `ADC0.RES`, subtracts `ADC_ZERO_OFFSET` (= `1 << 11` = 2048) to re-centre the VDD/2-biased, AC-coupled input to a signed range of −2048..+2047, and hands the sample to the acquisition callback. |
+| `ADC0_RESRDY` ISR | Fires when a conversion completes. It reads `ADC0.RES`, subtracts `ADC_ZERO_OFFSET` (= `1 << 11` = 2048) to re-centre the VDD/2-biased, AC-coupled input to a signed range of −2048..+2047, and accumulates it. Every 4th conversion the average of the group is handed to the acquisition callback: there is no analog anti-aliasing filter beyond the AC coupling, and the boxcar average of 4 evenly spaced conversions is a free first-order comb with nulls at multiples of `SAMPLE_FREQ`, attenuating energy that would otherwise fold into the analysis band (it also lowers the ADC noise floor). |
 
 The analog front end is **AC-coupled and biased at VDD/2**, so a quiet input sits
 near mid-scale. The fixed `ADC_ZERO_OFFSET` removes the nominal bias; any small
@@ -86,7 +86,7 @@ The firmware uses the MAX7219's five digit registers (digit 0..4):
 | `DIGIT_3` | 3 | bar graph segments (packed) |
 | `DIGIT_4` | 4 | bar graph segments (packed) |
 
-At init the driver sets scan limit to 4 (digits 0–4), intensity to maximum
-(`0x07`), and takes the chip out of shutdown. `max7219_reset()` zeroes all 16
+At init the driver sets scan limit to 4 (digits 0–4), intensity to mid-scale
+(`0x07` of `0x0F`), and takes the chip out of shutdown. `max7219_reset()` zeroes all 16
 registers first, which also defines the known-zero starting state that the
 display shadow framebuffer relies on.

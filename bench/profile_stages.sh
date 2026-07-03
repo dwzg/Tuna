@@ -20,11 +20,11 @@ mkdir -p "$OUT"
 
 # ---- stage names, keyed "<from>-<to>" (see PROFILE_MARK ids in the sources) -
 declare -A YIN_NAME=(
-    [1-2]="difference + CMND"  [2-3]="threshold / min search"
-    [3-4]="parabolic interp"   [4-255]="return + tail"
+    [1-2]="difference + CMND + threshold"  [2-3]="fallback min search"
+    [3-4]="parabolic interp"               [4-255]="return + tail"
 )
 declare -A FFT_NAME=(
-    [1-2]="DC removal"      [2-3]="windowing"        [3-4]="real-input pack"
+    [1-2]="DC removal + prescale"  [2-3]="windowing"  [3-4]="real-input pack"
     [4-5]="FFT transform"   [5-6]="magnitude split"  [6-7]="peak pick"
     [7-8]="octave correct"  [8-9]="parabolic interp" [9-255]="return + tail"
 )

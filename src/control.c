@@ -207,15 +207,18 @@ static void display_note(double frequency)
 
 /**
  * @brief Report whether the just-acquired frame carries a usable signal, i.e.
- *        whether any sample deviates from the frame's DC level by at least
- *        SILENCE_THRESHOLD. Gating on the AC excursion (distance from the mean)
- *        rather than the raw sample magnitude keeps a residual DC bias on the
- *        AC-coupled input from masking a quiet signal or registering as one.
+ *        whether at least SIGNAL_MIN_SAMPLES samples deviate from the frame's
+ *        DC level by at least SILENCE_THRESHOLD. Gating on the AC excursion
+ *        (distance from the mean) rather than the raw sample magnitude keeps a
+ *        residual DC bias on the AC-coupled input from masking a quiet signal
+ *        or registering as one; requiring several crossings keeps a single
+ *        impulse spike from opening the gate on an otherwise silent frame.
  */
 static uint8_t signal_is_present(const int16_t *buffer)
 {
     int32_t mean = 0;
     int16_t dc;
+    uint16_t above = 0;
     uint16_t k;
 
     for (k = 0; k < FRAME_SIZE; ++k) {
@@ -228,7 +231,7 @@ static uint8_t signal_is_present(const int16_t *buffer)
         if (s < 0) {
             s = (int16_t)-s;
         }
-        if (s >= SILENCE_THRESHOLD) {
+        if (s >= SILENCE_THRESHOLD && ++above >= SIGNAL_MIN_SAMPLES) {
             return 1;
         }
     }

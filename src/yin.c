@@ -61,8 +61,11 @@ For more information, please refer to <http://unlicense.org/>
  * @brief Maximum lag. Sets the lowest detectable frequency = SAMPLE_FREQ / YIN_TAU_MAX.
  *        With SAMPLE_FREQ=4096 this is 25.6 Hz, still below the lowest bass
  *        string (a 5-string low B is ~31 Hz), so the usable range is unaffected.
- *        The difference-function cost is O(YIN_W * YIN_TAU_MAX) and dominates the
- *        whole estimator, so this lag is the main speed knob. 160 was picked with
+ *        The difference-function cost is O(YIN_W * YIN_TAU_MAX) in the worst
+ *        case and dominates the whole estimator, so this lag is the main speed
+ *        knob (the fused threshold search below exits the loop early once a
+ *        note's period is found, so the full cost is only paid on frames with
+ *        no detectable dip). 160 was picked with
  *        bench/sweep.sh as the smallest lag with no measured accuracy change from
  *        the original 256 (identical gross-miss count and ~2 cent median error),
  *        cutting the difference loop by 38% (from ~150% to ~93% of the frame
@@ -79,6 +82,16 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define YIN_TAU_MIN 2
 
+/*
+ * The difference function reads samples[j + tau] for j < YIN_W and
+ * tau < YIN_TAU_MAX, so the window and maximum lag together must fit in one
+ * frame. YIN_W and YIN_TAU_MAX are build-overridable (the accuracy/cost
+ * sweep), so guard the combination instead of trusting it.
+ */
+#if YIN_W + YIN_TAU_MAX > FRAME_SIZE
+#error "yin.c: YIN_W + YIN_TAU_MAX must not exceed FRAME_SIZE"
+#endif
+
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/
@@ -92,6 +105,7 @@ double yin_frequency(int16_t samples[])
 {
     uint16_t tau, j;
     uint16_t tau_est = 0;
+    uint8_t dipping = 0;
     uint64_t running_sum = 0;
     double better_tau;
 
@@ -112,6 +126,15 @@ double yin_frequency(int16_t samples[])
      * accumulator (its total reaches ~10^11, beyond uint32) but is updated only
      * once per tau, and the single floating-point divide is deferred to the
      * normalization step.
+     *
+     * The absolute-threshold search is fused into the same pass so the loop
+     * can exit early: cmnd[tau] depends only on lags <= tau, so once the first
+     * dip below YIN_THRESHOLD has passed its local minimum, no later lag can
+     * change the estimate and the remaining difference-function work is
+     * skipped. The period of a detected note is tau_est ~ SAMPLE_FREQ / f0
+     * lags, so the higher the note the earlier the exit -- an A4 stops after
+     * ~12 of the YIN_TAU_MAX lags. The worst case (no dip: silence gated
+     * upstream, or an inharmonic frame) still runs the full range.
      */
     for (tau = 1; tau < YIN_TAU_MAX; ++tau) {
         uint32_t acc = 0;
@@ -123,19 +146,28 @@ double yin_frequency(int16_t samples[])
         cmnd[tau] = (running_sum > 0)
                   ? (float)((double)acc * (double)tau / (double)running_sum)
                   : 1.0f;
-    }
-    PROFILE_MARK(2);    /* difference function + CMND normalization done */
 
-    /* Absolute threshold: first dip below YIN_THRESHOLD, descended to its local minimum. */
-    for (tau = YIN_TAU_MIN; tau < YIN_TAU_MAX - 1; ++tau) {
-        if (cmnd[tau] < YIN_THRESHOLD) {
-            while (tau + 1 < YIN_TAU_MAX && cmnd[tau + 1] < cmnd[tau]) {
-                ++tau;
+        if (tau < YIN_TAU_MIN) {
+            continue;
+        }
+        if (dipping) {
+            if (cmnd[tau] >= cmnd[tau - 1]) {
+                /* The dip bottomed out at the previous lag; cmnd[tau] is the
+                 * rising neighbour the parabolic interpolation needs. */
+                tau_est = (uint16_t)(tau - 1);
+                break;
             }
-            tau_est = tau;
-            break;
+        } else if (cmnd[tau] < YIN_THRESHOLD) {
+            dipping = 1;
         }
     }
+
+    /* Still descending at the last lag: the minimum is the last lag itself. */
+    if (dipping && tau_est == 0) {
+        tau_est = YIN_TAU_MAX - 1;
+    }
+
+    PROFILE_MARK(2);    /* difference + CMND + fused threshold search done */
 
     /* Nothing crossed the threshold: fall back to the global minimum. */
     if (tau_est == 0) {
@@ -149,7 +181,7 @@ double yin_frequency(int16_t samples[])
         }
     }
 
-    PROFILE_MARK(3);    /* threshold / minimum search done */
+    PROFILE_MARK(3);    /* fallback minimum search done */
 
     /* Parabolic interpolation of the lag around tau_est for sub-sample accuracy. */
     better_tau = (double)tau_est;

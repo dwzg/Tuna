@@ -13,8 +13,9 @@ There are no runtime settings.
 |---|---|---|
 | `FRAME_SIZE` | 1024 | Samples per analysis frame; also the acquisition buffer length shared by both pitch methods. The FFT path additionally treats it as the transform length. **Must be a power of two** (the FFT and the derived `LOG2_FRAME_SIZE` both require it). |
 | `LOG2_FRAME_SIZE` | `__builtin_ctz(FRAME_SIZE)` | Log2 of `FRAME_SIZE`, derived so the two cannot drift. `__builtin_ctz` of a power of two is its base-2 log; the compiler folds it to a constant. Used only in ordinary integer expressions (never in a `#if` or array bound). |
-| `SAMPLE_FREQ` | `4096UL` | Sample rate in Hz. Minimum 367 Hz. Sets the TCA0 top value and scales every reported frequency; the Nyquist limit `SAMPLE_FREQ/2` caps detectable pitch. |
+| `SAMPLE_FREQ` | `4096UL` | Rate in Hz of the frames delivered to analysis. The HAL paces the ADC at 4× this rate (`OVERSAMPLE_FACTOR` in `hal.c`) and averages each group of 4 conversions into one sample — a first-order anti-aliasing comb plus ADC noise reduction. Sets the TCA0 top value and scales every reported frequency; the Nyquist limit `SAMPLE_FREQ/2` caps detectable pitch. The 16-bit timer bounds the oversampled rate to ≥ 367 Hz, i.e. `SAMPLE_FREQ` ≥ 92 Hz. |
 | `SILENCE_THRESHOLD` | 40 | Peak AC excursion (ADC counts; full scale ±2048 for the 12-bit single-ended result) below which a frame is treated as silence and the display blanks. |
+| `SIGNAL_MIN_SAMPLES` | 8 | Number of samples per frame that must reach `SILENCE_THRESHOLD` before the frame counts as signal, so a single impulse (switch click) cannot open the gate. A real tone at threshold amplitude crosses hundreds of times per frame. |
 
 ## Pitch-detection method
 
@@ -61,7 +62,7 @@ note-naming choice (below) instead switches with `#ifdef`.
 | Macro | Default | Meaning |
 |---|---|---|
 | `SMOOTHING_ALPHA` | 0.5 | EMA weight (0..1) on the newest estimate while refining a held note. Lower steadies the cents needle at the cost of a slower response. |
-| `OCTAVE_JUMP_FRAMES` | 3 | Consecutive frames an octave jump must persist before it is accepted as a real octave change rather than a transient half/double-pitch error. |
+| `OCTAVE_JUMP_FRAMES` | 2 | Consecutive frames an octave jump must persist before it is accepted as a real octave change rather than a transient half/double-pitch error. 2 rejects any single-frame glitch while keeping the lag on a genuine octave change to one frame (~250 ms). |
 
 ## Build-time overrides summary
 

@@ -71,7 +71,8 @@ independent of octave.
 when it does not fall exactly on a bin; reduced by windowing.
 
 **TCA0** — A timer/counter peripheral; here the free-running timer that paces ADC
-conversions at `SAMPLE_FREQ`.
+conversions at 4 × `SAMPLE_FREQ` (each group of 4 is averaged into one delivered
+sample).
 
 **Twiddle factor** — The complex exponential `exp(−j·2πk/N)` multiplied in at each
 FFT butterfly, read from the shared `SINEWAVE` table.
