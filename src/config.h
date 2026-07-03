@@ -53,6 +53,10 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define FRAME_SIZE 1024
 
+#if FRAME_SIZE < 2 || (FRAME_SIZE & (FRAME_SIZE - 1)) != 0
+#error "config.h: FRAME_SIZE must be a power of two"
+#endif
+
 /**
  * @brief Sample frequency in Hz.
  *        Minimum is 367 Hz.

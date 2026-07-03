@@ -79,6 +79,16 @@ For more information, please refer to <http://unlicense.org/>
  */
 #define YIN_TAU_MIN 2
 
+/*
+ * The difference function reads samples[j + tau] for j < YIN_W and
+ * tau < YIN_TAU_MAX, so the window and maximum lag together must fit in one
+ * frame. YIN_W and YIN_TAU_MAX are build-overridable (the accuracy/cost
+ * sweep), so guard the combination instead of trusting it.
+ */
+#if YIN_W + YIN_TAU_MAX > FRAME_SIZE
+#error "yin.c: YIN_W + YIN_TAU_MAX must not exceed FRAME_SIZE"
+#endif
+
 /*---------------------------------------------------------------------------*/
 /*                            LOCAL VARIABLES                                */
 /*---------------------------------------------------------------------------*/

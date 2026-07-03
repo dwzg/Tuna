@@ -15,6 +15,15 @@ set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 add_compile_options(-std=c11 -O2 -Wall -Wextra)
 
+# Optional Address/UndefinedBehavior sanitizers (CI turns this on). The DSP
+# code indexes fixed-size buffers heavily, so this catches out-of-bounds
+# accesses and arithmetic UB that a passing result would otherwise hide.
+option(TUNA_SANITIZE "Build the host tests with ASan + UBSan" OFF)
+if(TUNA_SANITIZE)
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
 # YIN path (config.h default selects PITCH_METHOD_YIN).
 add_executable(test_yin test_yin.c "${SRC}/yin.c")
 target_include_directories(test_yin PRIVATE "${SRC}")

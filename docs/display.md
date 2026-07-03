@@ -116,7 +116,7 @@ through the HAL pin setters.
 
 | Function | Behaviour |
 |---|---|
-| `max7219_init()` | Idle the pins (`DIN` low, `CLK` low, `LOAD` high), `max7219_reset()`, then set scan limit to 4 (digits 0–4), intensity to max (`0x07`), and leave shutdown (normal operation). |
+| `max7219_init()` | Idle the pins (`DIN` low, `CLK` low, `LOAD` high), `max7219_reset()`, then set scan limit to 4 (digits 0–4), intensity to mid-scale (`0x07` of `0x0F`), and leave shutdown (normal operation). |
 | `max7219_write(address, data)` | Clock a 16-bit frame (address in the high byte, data in the low byte) out MSB-first: `LOAD` low, then for each bit set `DIN` and pulse `CLK` high/low, then `LOAD` high to latch. |
 | `max7219_reset()` | Write `0x00` to every register `0x00..0x0F`, defining the known-zero state the shadow framebuffer's `shipped[]` assumes. |
 

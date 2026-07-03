@@ -54,6 +54,31 @@ int main(void)
     y = smooth_frequency(200.0);            /* vote 3: accepted */
     expect("octave-give-in", y, 200.0, 1e-9);
 
+    /* The downward half-pitch error is rejected symmetrically. */
+    smooth_frequency(0.0);
+    smooth_frequency(200.0);
+    y = smooth_frequency(100.0);            /* vote 1: held */
+    expect("octave-down-hold-1", y, 200.0, 1e-9);
+    y = smooth_frequency(100.0);            /* vote 2: held */
+    expect("octave-down-hold-2", y, 200.0, 1e-9);
+    y = smooth_frequency(100.0);            /* vote 3: accepted */
+    expect("octave-down-give-in", y, 100.0, 1e-9);
+
+    /* A non-octave interval (here a fifth) never counts as an octave artifact
+     * and snaps through immediately. */
+    smooth_frequency(0.0);
+    smooth_frequency(100.0);
+    expect("snap-fifth", smooth_frequency(150.0), 150.0, 1e-9);
+
+    /* Silence resets the pending octave votes: the same octave seen again
+     * after a reset starts over as a fresh first estimate. */
+    smooth_frequency(0.0);
+    smooth_frequency(100.0);
+    smooth_frequency(200.0);                /* vote 1 */
+    smooth_frequency(200.0);                /* vote 2 */
+    smooth_frequency(0.0);                  /* reset */
+    expect("votes-reset", smooth_frequency(200.0), 200.0, 1e-9);
+
     printf("%s (%d failure%s)\n", failures ? "FAILED" : "PASSED",
            failures, failures == 1 ? "" : "s");
     return failures ? 1 : 0;

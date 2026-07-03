@@ -224,21 +224,27 @@ void hal_delay_us(uint16_t us)
     _delay_us((double)us);
 }
 
+/*
+ * DIRSET/DIRCLR/OUTSET/OUTCLR are write-1-to-strobe registers that read back
+ * as DIR/OUT, so they must be written with plain assignment: a read-modify-
+ * write like OUTCLR |= bit would write back every currently-set OUT bit and
+ * clear all high pins on the port, not just the target pin.
+ */
 static void init_pin(PORT_t *port, uint8_t pin, uint8_t dir)
 {
     if (dir == OUTPUT) {
-        port->DIRSET |= (1 << pin);
+        port->DIRSET = (uint8_t)(1 << pin);
     } else {
-        port->DIRCLR |= (1 << pin);
+        port->DIRCLR = (uint8_t)(1 << pin);
     }
 }
 
 static void set_pin(PORT_t *port, uint8_t pin, uint8_t value)
 {
     if (value == HIGH) {
-        port->OUTSET |= (1 << pin);
+        port->OUTSET = (uint8_t)(1 << pin);
     } else {
-        port->OUTCLR |= (1 << pin);
+        port->OUTCLR = (uint8_t)(1 << pin);
     }
 }
 

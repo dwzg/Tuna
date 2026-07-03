@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S test -B test/build
+        run: cmake -S test -B test/build -DTUNA_SANITIZE=ON
       - name: Build
         run: cmake --build test/build
       - name: Run tests

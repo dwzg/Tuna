@@ -86,7 +86,7 @@ The firmware uses the MAX7219's five digit registers (digit 0..4):
 | `DIGIT_3` | 3 | bar graph segments (packed) |
 | `DIGIT_4` | 4 | bar graph segments (packed) |
 
-At init the driver sets scan limit to 4 (digits 0–4), intensity to maximum
-(`0x07`), and takes the chip out of shutdown. `max7219_reset()` zeroes all 16
+At init the driver sets scan limit to 4 (digits 0–4), intensity to mid-scale
+(`0x07` of `0x0F`), and takes the chip out of shutdown. `max7219_reset()` zeroes all 16
 registers first, which also defines the known-zero starting state that the
 display shadow framebuffer relies on.

@@ -124,6 +124,15 @@ static void acquisition_wait(void)
     }
 
     hal_stop_sample_counter();
+
+    /*
+     * Compiler barrier: the buffer contents were written by the ADC ISR, and
+     * the volatile fill_complete flag alone does not order the non-volatile
+     * buffer accesses. With LTO the whole pipeline can inline into control(),
+     * where the compiler could otherwise reuse values it still holds from the
+     * previous analysis of this (recycled) buffer.
+     */
+    __asm__ __volatile__("" ::: "memory");
 }
 
 static void acquisition_callback(int16_t sample)

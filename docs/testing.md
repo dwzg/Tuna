@@ -23,6 +23,11 @@ cmake --build test/build
 ctest --test-dir test/build --output-on-failure
 ```
 
+Passing `-DTUNA_SANITIZE=ON` at configure time additionally builds the tests
+with AddressSanitizer and UndefinedBehaviorSanitizer, so out-of-bounds buffer
+accesses and arithmetic UB in the DSP code fail the run even when the computed
+result happens to look right. CI enables this.
+
 ## Test programs
 
 | Test | Sources under test | What it checks |
@@ -49,8 +54,9 @@ Keep new DSP behaviour covered by a `test/` case where practical. To add a test:
 
 ## How CI uses the tests
 
-The `host-tests` CI job runs exactly the three commands above on
-`ubuntu-latest` with the native compiler — no AVR toolchain. The separate
+The `host-tests` CI job runs the three commands above (configuring with
+`-DTUNA_SANITIZE=ON`) on `ubuntu-latest` with the native compiler — no AVR
+toolchain. The separate
 `firmware` job then cross-compiles for the AVR64DD14 for both `YIN` and `FFT`, so
 each commit gets both a **behavioural** check (host tests) and a **both-paths
 compile** check on the real toolchain. See
